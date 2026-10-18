@@ -70,7 +70,8 @@ fun NetScoutApp(model: SearchViewModel) {
         focus.clearFocus()
         model.search()
         if (model.state.value.isSearching && model.state.value.error == null) scope.launch {
-            listState.animateScrollToItem(if (state.settingsWarning == null) 1 else 2)
+            // The heading and search form precede the optional settings warning.
+            listState.animateScrollToItem(if (state.settingsWarning == null) 2 else 3)
         }
         Unit
     }

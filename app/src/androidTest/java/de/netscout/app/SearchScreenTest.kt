@@ -12,9 +12,9 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SearchScreenTest {
     @get:Rule val compose = createComposeRule()
-    private fun launch(queries: CompletableDeferred<Unit>? = null, assessment: CompletableDeferred<Unit>? = null) {
+    private fun launch(queries: CompletableDeferred<Unit>? = null, assessment: CompletableDeferred<Unit>? = null, warning: String? = null) {
         val model = SearchViewModel(object : SettingsStore {
-            override fun load() = SettingsRead()
+            override fun load() = SettingsRead(warning = warning)
             override fun save(settings: de.netscout.data.ApiSettings) = Unit
         }) {
             SearchEngine(SearchSource.entries.map { source -> object : SearchProvider {
@@ -38,10 +38,15 @@ class SearchScreenTest {
         compose.setContent { NetScoutTheme { NetScoutApp(model) } }
     }
 
-    @Test fun everySelectedSourceShowsItsCurrentSearchPhase() {
+    @Test fun everySelectedSourceShowsItsCurrentSearchPhase() = assertVisibleSourceProgress()
+
+    @Test fun sourceProgressIsVisibleWithASettingsWarning() =
+        assertVisibleSourceProgress("Gespeicherte Zugänge konnten nicht gelesen werden. Bitte neu eingeben.")
+
+    private fun assertVisibleSourceProgress(warning: String? = null) {
         val queries = CompletableDeferred<Unit>()
         val assessment = CompletableDeferred<Unit>()
-        launch(queries, assessment)
+        launch(queries, assessment, warning)
         compose.onNodeWithText("Keywords").performTextInput("kotlin")
         compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
         fun inSource(source: SearchSource, text: String) = hasText(text) and hasAnyAncestor(hasTestTag("source-status-${source.name}"))
