@@ -29,7 +29,8 @@ class SearchEngine(
         require(request.validationError() == null) { request.validationError().orEmpty() }
         cursors.filterKeys { it in request.sources }.forEach { (source, cursor) ->
             launch {
-                val key = Key(request, source, cursor)
+                // Expanding the selection must not spend quota again on unchanged source queries.
+                val key = Key(request.copy(sources = setOf(source)), source, cursor)
                 val cached = synchronized(cache) { cache[key]?.takeIf { nowMillis() - it.at < cacheTtlMillis } }
                 if (cached != null) {
                     send(cached.outcome.copy(cached = true))

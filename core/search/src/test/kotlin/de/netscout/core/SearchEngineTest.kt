@@ -49,6 +49,18 @@ class SearchEngineTest {
         }
         assertEquals(2, calls)
     }
+    @Test fun `expanding source selection reuses unchanged source pages`() = runTest {
+        var githubCalls = 0; var hnCalls = 0
+        val engine = SearchEngine(listOf(
+            provider(SearchSource.GITHUB) { githubCalls++; SourcePage(emptyList()) },
+            provider(SearchSource.HACKER_NEWS) { hnCalls++; SourcePage(emptyList()) },
+        ))
+        engine.search(request.copy(sources = setOf(SearchSource.GITHUB))).toList()
+        val expanded = engine.search(request).toList()
+        assertEquals(1, githubCalls)
+        assertEquals(1, hnCalls)
+        assertTrue(expanded.single { it.source == SearchSource.GITHUB }.cached)
+    }
     @Test fun `cancelling search cancels provider work`() = runTest {
         var cancelled = false
         val engine = SearchEngine(listOf(provider(SearchSource.GITHUB) {

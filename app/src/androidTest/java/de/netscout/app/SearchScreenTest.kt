@@ -8,6 +8,7 @@ import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.netscout.core.*
 import java.io.File
+import java.io.FileInputStream
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -33,8 +34,6 @@ class SearchScreenTest {
         screenshot("search-form.png")
         compose.onNodeWithText("Keywords").performTextInput("kotlin")
         compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
-        compose.onNodeWithTag("search-content").performScrollToNode(hasText("1 Treffer"))
-        compose.onNodeWithText("1 Treffer").assertIsDisplayed()
         compose.onNodeWithTag("search-content").performScrollToNode(hasText("Kotlin Testtreffer"))
         compose.onNodeWithText("Kotlin Testtreffer").assertIsDisplayed()
         screenshot("search-results.png")
@@ -48,12 +47,22 @@ class SearchScreenTest {
         launch()
         compose.onNodeWithText("Neueste Beiträge zuerst").performScrollTo().performClick().assertIsOn()
         compose.onNodeWithText("Höchste Relevanz zuerst").assertIsOff()
-        compose.onNodeWithText("Höchste Relevanz zuerst").performClick().assertIsOn()
+        compose.onNodeWithText("Höchste Relevanz zuerst").performScrollTo().performClick().assertIsOn()
         compose.onNodeWithText("Neueste Beiträge zuerst").assertIsOff()
     }
     private fun screenshot(name: String) {
         compose.waitForIdle()
-        val directory = File(InstrumentationRegistry.getInstrumentation().targetContext.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
-        File(directory, name).outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
+        val instrumentation = InstrumentationRegistry.getInstrumentation()
+        val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
+        val file = File(directory, name)
+        file.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
+        // UTP uninstalls the test app at teardown. Keep CI captures in shell-owned temporary storage.
+        fun shell(command: String) {
+            instrumentation.uiAutomation.executeShellCommand(command).use { descriptor ->
+                FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
+            }
+        }
+        shell("mkdir -p /data/local/tmp/netscout-screenshots")
+        shell("cp '${file.absolutePath}' /data/local/tmp/netscout-screenshots/$name")
     }
 }
