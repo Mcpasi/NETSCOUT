@@ -47,4 +47,17 @@ class ResultMergerTest {
         val hits = ResultMerger.merge(request, listOf(item("low", rank = 20), item("best", source = SearchSource.HACKER_NEWS)))
         assertEquals("best", hits.first().item.id)
     }
+    @Test fun `unrelated source results never enter the list even when ranked first or newest`() {
+        val input = request.copy(keywords = "Codex,mobile,android", sort = SortOrder.NEWEST)
+        val good = item("good").copy(title = "Codex mobile", snippet = "Android app", searchText = "Android app")
+        val partial = item("partial", date = "2026-10-18T00:00:00Z").copy(title = "Codex for iOS", searchText = "mobile app")
+        val bad = item("bad", date = "2026-10-18T00:00:00Z").copy(title = "Unrelated topic", searchText = "No matching words")
+        assertEquals(listOf("good"), ResultMerger.merge(input, listOf(bad, partial, good)).map { it.item.id })
+    }
+    @Test fun `actual title evidence outranks a high provider position with buried mentions`() {
+        val input = request.copy(keywords = "codex mobile android")
+        val title = item("title", rank = 100).copy(title = "Codex mobile Android", searchText = "")
+        val body = item("body").copy(title = "General release notes", searchText = "codex mobile android")
+        assertEquals("title", ResultMerger.merge(input, listOf(body, title)).first().item.id)
+    }
 }

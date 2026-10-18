@@ -8,7 +8,7 @@ enum class SearchSource(val label: String, val hint: String) {
     REDDIT("Reddit", "OAuth oder Suchindex"),
     YOUTUBE("YouTube", "API-Key oder Suchindex"),
     WEB("Web", "SearXNG-Zugang"),
-    GITHUB("GitHub", "Öffentliche Issues & PRs"),
+    GITHUB("GitHub", "Repos, Issues & PRs"),
     FORUMS("Foren", "3 Stack-Exchange-Foren"),
     HACKER_NEWS("Hacker News", "Öffentliche Beiträge"),
 }
@@ -24,10 +24,13 @@ data class SearchRequest(
     val until: LocalDate? = null,
     val sort: SortOrder = SortOrder.RELEVANCE,
 ) {
+    val keywordQuery: KeywordQuery by lazy { KeywordQuery.parse(keywords) }
     fun normalized() = copy(keywords = keywords.trim().replace(Regex("\\s+"), " "))
     fun validationError(): String? = when {
         keywords.trim().length < 2 -> "Bitte mindestens zwei Zeichen eingeben."
         keywords.length > 256 -> "Bitte höchstens 256 Zeichen eingeben."
+        !keywordQuery.balancedQuotes -> "Bitte die Anführungszeichen der Suchphrase schließen."
+        keywordQuery.terms.isEmpty() -> "Bitte Suchbegriffe mit Buchstaben oder Zahlen eingeben."
         sources.isEmpty() -> "Bitte mindestens eine Quelle auswählen."
         from != null && until != null && from > until -> "Das Von-Datum muss vor oder am Bis-Datum liegen."
         else -> null
@@ -53,6 +56,7 @@ data class SearchItem(
     val rank: Int = 1,
     val context: String = "",
     val license: String? = null,
+    val searchText: String = snippet,
 )
 
 data class SearchCursor(val token: String, val offset: Int = 0)

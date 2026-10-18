@@ -12,14 +12,15 @@ class SearxngProvider(
         val base = instance.trimEnd('/').plus('/').toHttpUrlOrNull()
         if (instance.isBlank() || base == null) throw SourceException(SourceStatus.SETUP_REQUIRED, "SearXNG-HTTPS-URL in Zugänge einrichten; JSON muss dort aktiviert sein.")
         val page = cursor?.token?.toIntOrNull() ?: 1
+        val keywords = request.keywordQuery
         val query = when (source) {
-            SearchSource.REDDIT -> "site:reddit.com ${request.keywords}"
-            SearchSource.YOUTUBE -> "site:youtube.com/watch ${request.keywords}"
-            else -> request.keywords
+            SearchSource.REDDIT -> "site:reddit.com ${keywords.remoteQuery}"
+            SearchSource.YOUTUBE -> "site:youtube.com/watch ${keywords.remoteQuery}"
+            else -> keywords.remoteQuery
         }
         val url = base.newBuilder().addPathSegment("search").addQueryParameter("q", query)
             .addQueryParameter("format", "json").addQueryParameter("pageno", page.toString())
-            .addQueryParameter("language", "auto").addQueryParameter("safesearch", "1").build()
+            .addQueryParameter("language", "all").addQueryParameter("safesearch", "1").build()
         val json = http.get(url)
         val rows = json.requireRows("results")
         val items = rows.mapIndexedNotNull { index, row ->
@@ -28,8 +29,9 @@ class SearxngProvider(
             val host = parsed.host.removePrefix("www.")
             if (source == SearchSource.REDDIT && host != "reddit.com" && !host.endsWith(".reddit.com")) return@mapIndexedNotNull null
             if (source == SearchSource.YOUTUBE && host != "youtube.com" && !host.endsWith(".youtube.com") && host != "youtu.be") return@mapIndexedNotNull null
-            SearchItem(link, source, cleanHtml(row.text("title")), link, cleanHtml(row.text("content")),
-                publishedAt = parseDate(row.text("publishedDate")), rank = (cursor?.offset ?: 0) + index + 1, context = "Suchindex · $host")
+            val body = fullText(row.text("content"))
+            SearchItem(link, source, cleanHtml(row.text("title")), link, keywords.snippet(body),
+                publishedAt = parseDate(row.text("publishedDate")), rank = (cursor?.offset ?: 0) + index + 1, context = "Suchindex · $host", searchText = body)
         }
         val next = if (rows.isNotEmpty() && page < 10) SearchCursor((page + 1).toString(), (cursor?.offset ?: 0) + rows.size) else null
         val warnings = json.array("unresponsive_engines").size

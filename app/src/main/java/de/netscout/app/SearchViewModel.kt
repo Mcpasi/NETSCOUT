@@ -22,6 +22,7 @@ data class SearchUiState(
     val results: List<SearchHit> = emptyList(),
     val outcomes: Map<SearchSource, SourceOutcome> = emptyMap(),
     val sourceCounts: Map<SearchSource, Int> = emptyMap(),
+    val unmatchedCount: Int = 0,
     val isSearching: Boolean = false,
     val error: String? = null,
     val settings: ApiSettings = ApiSettings(),
@@ -57,7 +58,7 @@ class SearchViewModel(
         request.validationError()?.let { message -> mutableState.update { it.copy(error = message) }; return }
         cancel()
         items.clear()
-        mutableState.update { it.copy(activeRequest = request, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap(), error = null) }
+        mutableState.update { it.copy(activeRequest = request, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap(), unmatchedCount = 0, error = null) }
         execute(request, request.sources.associateWith { null })
     }
 
@@ -89,7 +90,8 @@ class SearchViewModel(
                         val saved = if (outcome.status != SourceStatus.SUCCESS) outcome.copy(page = current.outcomes[outcome.source]?.page ?: outcome.page) else outcome
                         current.copy(
                             outcomes = current.outcomes + (outcome.source to saved),
-                            sourceCounts = items.mapValues { (_, rows) -> rows.count { request.includes(it.publishedAt) } },
+                            sourceCounts = items.mapValues { (_, rows) -> ResultMerger.merge(request, rows).size },
+                            unmatchedCount = items.values.sumOf { rows -> rows.count { request.keywordQuery.match(it.title, it.searchText) == null } },
                             results = ResultMerger.merge(request, items.values.flatten()),
                         )
                     }
@@ -109,7 +111,7 @@ class SearchViewModel(
             cancel()
             engine = engineFactory(settings)
             items.clear()
-            mutableState.update { it.copy(settings = settings, settingsWarning = null, activeRequest = null, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap()) }
+            mutableState.update { it.copy(settings = settings, settingsWarning = null, activeRequest = null, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap(), unmatchedCount = 0) }
             null
         } catch (_: Exception) { "Zugänge konnten nicht verschlüsselt gespeichert werden. Bitte erneut versuchen." }
     }

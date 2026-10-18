@@ -4,6 +4,8 @@ import de.netscout.core.*
 import kotlinx.coroutines.runBlocking
 import okhttp3.mockwebserver.MockResponse
 import okhttp3.mockwebserver.MockWebServer
+import okhttp3.mockwebserver.Dispatcher
+import okhttp3.mockwebserver.RecordedRequest
 import org.junit.After
 import org.junit.Assert.*
 import org.junit.Before
@@ -24,21 +26,35 @@ class ProvidersTest {
         val page = HackerNewsProvider(http, server.url("/api/v1/")).search(request, null)
         val url = server.takeRequest().requestUrl!!
         assertEquals("/api/v1/search_by_date", url.encodedPath)
-        assertEquals("kotlin & android", url.queryParameter("query"))
+        assertEquals("\"kotlin\" \"android\"", url.queryParameter("query"))
+        assertEquals("false", url.queryParameter("typoTolerance"))
+        assertEquals("prefixNone", url.queryParameter("queryType"))
+        assertEquals("none", url.queryParameter("removeWordsIfNoResults"))
+        assertEquals("title,story_text", url.queryParameter("restrictSearchableAttributes"))
         assertEquals("created_at_i>=1767225600,created_at_i<1767398400", url.queryParameter("numericFilters"))
         assertEquals("Kotlin & Android", page.items.single().title)
         assertEquals(SearchCursor("1", 1), page.nextCursor)
         assertEquals(Instant.parse("2026-01-01T00:00:00Z"), page.items.single().publishedAt)
     }
     @Test fun `GitHub searches public posts with created date and optional scoped token`() = runBlocking {
-        respond("""{"items":[{"id":1,"title":"Kotlin","html_url":"https://github.com/a/b/issues/1","body":"<b>Test</b>","user":{"login":"alice"},"created_at":"2026-01-01T00:00:00Z"}],"total_count":31,"incomplete_results":true}""")
-        respond("""{"items":[],"total_count":0,"incomplete_results":false}""")
+        server.dispatcher = object : Dispatcher() {
+            override fun dispatch(request: RecordedRequest): MockResponse {
+                val body = when {
+                    request.requestUrl!!.encodedPath == "/search/repositories" -> """{"items":[{"id":2,"full_name":"sample/kotlin-android","html_url":"https://github.com/sample/kotlin-android","description":"Kotlin Android app","owner":{"login":"sample"},"created_at":"2026-01-01T00:00:00Z"}],"total_count":1}"""
+                    request.requestUrl!!.queryParameter("q")!!.contains("is:issue") -> """{"items":[{"id":1,"title":"Kotlin","html_url":"https://github.com/a/b/issues/1","body":"<b>Test</b>","user":{"login":"alice"},"created_at":"2026-01-01T00:00:00Z"}],"total_count":31,"incomplete_results":true}"""
+                    else -> """{"items":[],"total_count":0,"incomplete_results":false}"""
+                }
+                return MockResponse().setHeader("Content-Type", "application/json").setBody(body)
+            }
+        }
         val page = GitHubProvider(http, "test-token", server.url("/")).search(request, null)
-        val calls = List(2) { server.takeRequest() }
+        val calls = List(3) { server.takeRequest() }
         assertTrue(calls.all { it.getHeader("Authorization") == "Bearer test-token" })
-        assertEquals(setOf("kotlin & android is:public is:issue created:2026-01-01..2026-01-02", "kotlin & android is:public is:pull-request created:2026-01-01..2026-01-02"), calls.map { it.requestUrl!!.queryParameter("q") }.toSet())
-        assertTrue(calls.all { it.requestUrl!!.queryParameter("sort") == "created" })
-        assertEquals("Test", page.items.single().snippet)
+        val keywords = "\"kotlin\" \"android\" is:public "
+        assertEquals(setOf(keywords + "in:name,description created:2026-01-01..2026-01-02", keywords + "is:issue in:title,body created:2026-01-01..2026-01-02", keywords + "is:pull-request in:title,body created:2026-01-01..2026-01-02"), calls.map { it.requestUrl!!.queryParameter("q") }.toSet())
+        assertTrue(calls.all { it.requestUrl!!.queryParameter("sort") == if (it.requestUrl!!.encodedPath.endsWith("repositories")) "updated" else "created" })
+        assertEquals("Test", page.items.single { it.context == "Issue" }.snippet)
+        assertEquals("sample/kotlin-android", page.items.single { it.context == "Repository" }.title)
         assertEquals("2", page.nextCursor!!.token)
         assertTrue(page.note!!.contains("unvollständige"))
     }
@@ -47,6 +63,7 @@ class ProvidersTest {
         val page = YouTubeProvider(http, "test-key", server.url("/youtube/v3/")).search(request, SearchCursor("current-token", 25))
         val recorded = server.takeRequest()
         assertEquals("test-key", recorded.getHeader("X-Goog-Api-Key"))
+        assertEquals("\"kotlin\" \"android\"", recorded.requestUrl!!.queryParameter("q"))
         assertNull(recorded.requestUrl!!.queryParameter("key"))
         assertEquals("current-token", recorded.requestUrl!!.queryParameter("pageToken"))
         assertEquals("2026-01-03T00:00:00Z", recorded.requestUrl!!.queryParameter("publishedBefore"))
@@ -59,6 +76,7 @@ class ProvidersTest {
         val page = RedditProvider(http, "test-oauth", server.url("/")).search(request, SearchCursor("t3_before", 25))
         val recorded = server.takeRequest()
         assertEquals("Bearer test-oauth", recorded.getHeader("Authorization"))
+        assertEquals("\"kotlin\" AND \"android\"", recorded.requestUrl!!.queryParameter("q"))
         assertEquals("t3_before", recorded.requestUrl!!.queryParameter("after"))
         assertEquals("new", recorded.requestUrl!!.queryParameter("sort"))
         assertEquals(SearchCursor("t3_two", 26), page.nextCursor)
@@ -71,6 +89,7 @@ class ProvidersTest {
         val calls = List(3) { server.takeRequest().requestUrl!! }
         assertEquals(setOf("stackoverflow", "superuser", "serverfault"), calls.map { it.queryParameter("site") }.toSet())
         assertTrue(calls.all { it.queryParameter("todate") == "1767398399" })
+        assertTrue(calls.all { it.queryParameter("q") == "\"kotlin\" \"android\"" })
         assertEquals(2, page.items.size)
         assertEquals("Alice", page.items.first().author)
         assertEquals("CC BY-SA 4.0", page.items.first().license)
@@ -84,7 +103,10 @@ class ProvidersTest {
         assertEquals("Right", page.items.single().title)
         assertEquals(Instant.parse("2026-01-02T00:00:00Z"), page.items.single().publishedAt)
         assertTrue(page.note!!.contains("1 Suchmaschinen"))
-        assertEquals("site:reddit.com kotlin & android", server.takeRequest().requestUrl!!.queryParameter("q"))
+        val recorded = server.takeRequest()
+        assertEquals("site:reddit.com \"kotlin\" \"android\"", recorded.requestUrl!!.queryParameter("q"))
+        assertEquals("all", recorded.requestUrl!!.queryParameter("language"))
+        assertNull(recorded.getHeader("Accept-Language"))
     }
     @Test fun `missing credentials request no network access`() = runBlocking {
         try { YouTubeProvider(http, "").search(request, null); fail() }
@@ -104,5 +126,15 @@ class ProvidersTest {
         respond("""{"unexpected":"schema-changed"}""")
         try { HackerNewsProvider(http, server.url("/")).search(request, null); fail() }
         catch (failure: SourceException) { assertEquals(SourceStatus.ERROR, failure.status) }
+    }
+    @Test fun `user comma query is sent as three required words and finds body evidence after 700 characters`() = runBlocking {
+        val text = "Intro. ".repeat(200) + "Codex mobile client for Android"
+        respond("""{"hits":[{"objectID":"123","title":"Release notes","story_text":"$text","created_at_i":1767225600}],"nbPages":1}""")
+        val input = request.copy(keywords = "Codex,mobile,android")
+        val page = HackerNewsProvider(http, server.url("/api/v1/")).search(input, null)
+        assertEquals("\"Codex\" \"mobile\" \"android\"", server.takeRequest().requestUrl!!.queryParameter("query"))
+        assertTrue(page.items.single().searchText.length > 700)
+        assertTrue(page.items.single().snippet.contains("Codex mobile client for Android"))
+        assertEquals(1, ResultMerger.merge(input, page.items).size)
     }
 }

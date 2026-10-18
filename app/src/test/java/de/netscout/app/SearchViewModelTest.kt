@@ -37,7 +37,7 @@ class SearchViewModelTest {
         var calls = 0
         val model = model { _, cursor ->
             calls++
-            SourcePage(listOf(SearchItem("$calls", SearchSource.GITHUB, "Hit $calls", "https://example.org/$calls")),
+            SourcePage(listOf(SearchItem("$calls", SearchSource.GITHUB, "Kotlin Hit $calls", "https://example.org/$calls")),
                 if (cursor == null) SearchCursor("2", 1) else null)
         }
         model.keywords("kotlin"); model.search(); advanceUntilIdle()
@@ -75,5 +75,19 @@ class SearchViewModelTest {
         assertEquals(SortOrder.NEWEST, model.state.value.sort)
         model.sort(SortOrder.RELEVANCE)
         assertEquals(SortOrder.RELEVANCE, model.state.value.sort)
+    }
+    @Test fun `user query filters source counts and still loads later matching pages`() = runTest(dispatcher) {
+        val model = model { _, cursor ->
+            if (cursor == null) SourcePage(listOf(SearchItem("partial", SearchSource.GITHUB, "Codex mobile iOS", "https://example.org/partial")), SearchCursor("2"))
+            else SourcePage(listOf(SearchItem("good", SearchSource.GITHUB, "Codex mobile Android", "https://example.org/good")))
+        }
+        model.keywords("Codex,mobile,android"); model.search(); advanceUntilIdle()
+        assertEquals(0, model.state.value.results.size)
+        assertEquals(0, model.state.value.sourceCounts[SearchSource.GITHUB])
+        assertEquals(1, model.state.value.unmatchedCount)
+        assertTrue(model.state.value.canLoadMore)
+        model.loadMore(); advanceUntilIdle()
+        assertEquals("good", model.state.value.results.single().item.id)
+        assertEquals(1, model.state.value.sourceCounts[SearchSource.GITHUB])
     }
 }

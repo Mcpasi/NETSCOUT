@@ -11,9 +11,10 @@ class YouTubeProvider(
 ) : SearchProvider {
     override val source = SearchSource.YOUTUBE
     override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
+        val query = request.keywordQuery
         if (apiKey.isBlank()) throw SourceException(SourceStatus.SETUP_REQUIRED, "YouTube-API-Key oder SearXNG in Zugänge einrichten.")
         val url = baseUrl.newBuilder().addPathSegment("search").addQueryParameter("part", "snippet")
-            .addQueryParameter("type", "video").addQueryParameter("q", request.keywords)
+            .addQueryParameter("type", "video").addQueryParameter("q", query.remoteQuery)
             .addQueryParameter("maxResults", "25").addQueryParameter("order", if (request.sort == SortOrder.NEWEST) "date" else "relevance")
             .apply {
                 cursor?.let { addQueryParameter("pageToken", it.token) }
@@ -26,9 +27,10 @@ class YouTubeProvider(
         val items = rows.mapIndexedNotNull { index, row ->
             val id = row.obj("id").text("videoId").takeIf { it.matches(Regex("[A-Za-z0-9_-]+")) } ?: return@mapIndexedNotNull null
             val snippet = row.obj("snippet")
+            val body = fullText(snippet.text("description"))
             SearchItem(id, source, cleanHtml(snippet.text("title")), "https://www.youtube.com/watch?v=$id",
-                cleanHtml(snippet.text("description")), cleanHtml(snippet.text("channelTitle")), parseDate(snippet.text("publishedAt")),
-                (cursor?.offset ?: 0) + index + 1, "Video")
+                query.snippet(body), cleanHtml(snippet.text("channelTitle")), parseDate(snippet.text("publishedAt")),
+                (cursor?.offset ?: 0) + index + 1, "Video", searchText = body)
         }
         return SourcePage(items, result.text("nextPageToken").takeIf { it.isNotBlank() }?.let { SearchCursor(it, (cursor?.offset ?: 0) + rows.size) })
     }

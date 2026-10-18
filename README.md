@@ -3,6 +3,7 @@
 Ein erster nativer Kotlin-/Jetpack-Compose-Prototyp für eine quellenübergreifende Keyword-Suche. Android 8.0+ (API 26), deutsche Oberfläche, keine Anmeldung bei NetScout und kein eigener Backend-Dienst nötig.
 
 - Keywords, optionale Von-/Bis-Daten und sechs auswählbare Quellen.
+- Wörtliche UND-Suche: `Codex,mobile,android` verlangt alle drei Begriffe in Titel oder Beitragstext. Kommas, Semikolons und Leerzeichen trennen Keywords; Anführungszeichen gruppieren genaue Phrasen.
 - Neueste Beiträge oder höchste Relevanz; die Sortier-Checkboxen sind gegenseitig exklusiv.
 - Echte Treffer, Links zur Originalquelle, Quellenstatus und weitere Ergebnisse per Pagination.
 - Parallele Quellenabfragen; Fehler einzelner Plattformen beeinträchtigen die übrigen nicht.
@@ -18,7 +19,7 @@ Alle Debug-Builds verwenden den eingecheckten [Entwicklungsschlüssel](debug-sig
 
 | Quelle | Zugriff im Prototyp | Grenzen |
 | --- | --- | --- |
-| GitHub | Öffentliche Issues und Pull Requests über die offizielle REST API, ohne Token | Zwei Abfragen pro Seite; keine Repository-/Code-/Discussion-Suche. Anonyme Suche stärker limitiert; optionaler Token erhöht das Kontingent. |
+| GitHub | Öffentliche Repositories, Issues und Pull Requests über die offizielle REST API, ohne Token | Drei Abfragen pro Seite. Repositories: Name und Beschreibung; Issues/PRs: Titel und Text, keine Kommentare. Kein Code-/README-/Discussion-Index. Anonyme Suche stärker limitiert; optionaler Token erhöht das Kontingent. |
 | Hacker News | Öffentliche Story-Beiträge über die Algolia-HN-Suche, ohne Schlüssel | Drittanbieterindex; Link öffnet die HN-Diskussion. Keine Kommentare im Prototyp. |
 | Foren | Fragen auf Stack Overflow, Super User und Server Fault über die Stack Exchange API | Kein universeller Forenindex; Kontingente und `backoff` beachten. Autor, Original-Link und Lizenz werden angezeigt. |
 | YouTube | Offizielle Data API v3 mit eigenem API-Key; alternativ SearXNG-Indexsuche | API im Google-Projekt aktivieren, Suchkontingent begrenzt. Indexsuche bietet geringere Abdeckung/Datumsqualität. |
@@ -33,7 +34,11 @@ Es gibt keinen verlässlichen, unbegrenzt kostenlosen Vollzugriff auf alle Platt
 
 Die Datumsgrenzen beziehen sich auf **Veröffentlichung/Erstellung in UTC**, einschließlich beider ausgewählter Tage. Soweit die API es unterstützt, werden Grenzen bereits an die Quelle übergeben; danach wird zentral erneut exakt gefiltert. Reddit und SearXNG werden lokal gefiltert. Treffer ohne bekanntes Datum werden bei aktivem Datumsfilter ausgeschlossen. Weitere Seiten können dann nötig sein; eine vollständige historische Suche ist nicht garantiert. „Neueste“ sortiert die **geladenen** Treffer, unbekannte Daten stehen am Ende.
 
-Relevanz kombiniert pro Quelle die Rangposition mit Reciprocal Rank Fusion (`1 / (60 + Rang)`) und einer kleinen Gewichtung für Keywords im Titel. Inkompatible Popularitätswerte verschiedener Plattformen werden nicht vermischt. Identische URLs werden über Quellen und Seiten zusammengeführt, Trackingparameter und Fragmente ignoriert. Bedeutungsvolle Parameter wie YouTube-Video-IDs bleiben erhalten.
+Jeder angezeigte Treffer muss alle Keywords als ganze Begriffe im Titel oder im gelieferten Beitragstext enthalten. Ein hoher Plattformrang reicht nicht aus. Bei langen Texten wird vor dem Kürzen geprüft; die Vorschau zeigt passende Textstellen und hebt die Begriffe hervor. Der Quellenstatus zählt bestätigte Treffer. Verworfenes bleibt bei der Pagination berücksichtigt, damit nach einer leeren gefilterten Seite weitergesucht werden kann.
+
+Relevanz priorisiert belegte Titel-Treffer, danach Text-Treffer und die quellenübergreifende Rangposition per Reciprocal Rank Fusion (`1 / (60 + Rang)`). Inkompatible Popularitätswerte verschiedener Plattformen werden nicht vermischt. Identische URLs werden über Quellen und Seiten zusammengeführt, Trackingparameter und Fragmente ignoriert. Bedeutungsvolle Parameter wie YouTube-Video-IDs bleiben erhalten.
+
+Die Suche berücksichtigt alle Sprachen unabhängig von der deutschen App-Oberfläche. GitHub/HN erhalten keine Deutsch- oder Länder-Vorgabe; SearXNG wird explizit mit `language=all` angesprochen. Die Sprache der Keywords und die Abdeckung der Plattformen beeinflussen den Sprachmix weiterhin. Es gibt keine automatische Übersetzung, Wortstammsuche oder semantische Ähnlichkeitssuche. `AI` trifft beispielsweise nicht allein auf `Gmail` zu. HN erhält zusätzlich deaktivierte Tippfehler-/Präfixsuche und darf fehlende Wörter nicht automatisch weglassen.
 
 ## Lokal bauen
 
@@ -54,6 +59,12 @@ Geräte-/Oberflächentests bei laufendem Emulator oder angeschlossenem Android-G
 GitHub Actions führt Unit-Tests, Android Lint, den signierten Debug-Build und in einem separaten Job Emulator-Tests auf API 29 aus. Der Workflow ist zusätzlich über `workflow_dispatch` manuell startbar. Test- und Lint-Berichte werden als Artefakte bereitgestellt. Tests verwenden lokale HTTP-Fixtures/Fake-Provider; sie verbrauchen keine Plattformkontingente und benötigen keine Secrets.
 
 Nach den Emulator-Tests wird außerdem die tatsächliche APK installiert und über ihre Launcher-Activity gestartet. Eine Bildschirmaufnahme dieses Startchecks liegt im Artefakt `android-ui-tests`.
+
+Ein optionaler Integrationstest prüft echte GitHub-/HN-Abfragen mit dem gemeldeten Suchbeispiel und gibt bestätigte Treffer aus. Er verbraucht API-Kontingent und läuft deshalb nicht automatisch in CI:
+
+```sh
+./gradlew :data:search:checkLiveSearch -PsearchKeywords=Codex,mobile,android
+```
 
 ## Architektur und Erweiterung
 

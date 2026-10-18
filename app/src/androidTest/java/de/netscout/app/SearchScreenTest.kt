@@ -19,7 +19,12 @@ class SearchScreenTest {
             SearchEngine(SearchSource.entries.map { source -> object : SearchProvider {
                 override val source = source
                 override suspend fun search(request: SearchRequest, cursor: SearchCursor?) = SourcePage(
-                    if (source == SearchSource.GITHUB) listOf(SearchItem("1", source, "Kotlin Testtreffer", "https://example.org/kotlin")) else emptyList())
+                    if (source != SearchSource.GITHUB) emptyList()
+                    else if (request.keywords.contains("Codex", ignoreCase = true)) listOf(
+                        SearchItem("good", source, "Codex mobile for Android", "https://example.org/good"),
+                        SearchItem("partial", source, "Codex mobile for iOS", "https://example.org/partial"),
+                        SearchItem("wrong", source, "Unrelated topic", "https://example.org/wrong"),
+                    ) else listOf(SearchItem("1", source, "Kotlin Testtreffer", "https://example.org/kotlin")))
             } })
         }
         compose.setContent { NetScoutTheme { NetScoutApp(model) } }
@@ -42,5 +47,16 @@ class SearchScreenTest {
         compose.onNodeWithText("Höchste Relevanz zuerst").assertIsOff()
         compose.onNodeWithText("Höchste Relevanz zuerst").performScrollTo().performClick().assertIsOn()
         compose.onNodeWithText("Neueste Beiträge zuerst").assertIsOff()
+    }
+    @Test fun commaSeparatedKeywordsShowOnlyCompleteMatches() {
+        launch()
+        compose.onNodeWithText("Keywords").performTextInput("Codex,mobile,android")
+        compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
+        compose.onNodeWithTag("search-content").performScrollToNode(hasText("2 Ergebnisse ohne alle Keywords ausgeblendet."))
+        compose.onNodeWithText("2 Ergebnisse ohne alle Keywords ausgeblendet.").assertIsDisplayed()
+        compose.onNodeWithTag("search-content").performScrollToNode(hasText("Codex mobile for Android"))
+        compose.onNodeWithText("Codex mobile for Android").assertIsDisplayed()
+        compose.onNodeWithText("Codex mobile for iOS").assertDoesNotExist()
+        compose.onNodeWithText("Unrelated topic").assertDoesNotExist()
     }
 }

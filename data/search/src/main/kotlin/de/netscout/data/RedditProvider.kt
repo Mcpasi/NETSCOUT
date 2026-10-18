@@ -11,8 +11,9 @@ class RedditProvider(
 ) : SearchProvider {
     override val source = SearchSource.REDDIT
     override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
+        val query = request.keywordQuery
         if (accessToken.isBlank()) throw SourceException(SourceStatus.SETUP_REQUIRED, "Genehmigten Reddit-OAuth-Zugang oder SearXNG in Zugänge einrichten.")
-        val url = baseUrl.newBuilder().addPathSegment("search").addQueryParameter("q", request.keywords)
+        val url = baseUrl.newBuilder().addPathSegment("search").addQueryParameter("q", query.terms.joinToString(" AND ") { "\"$it\"" })
             .addQueryParameter("type", "link").addQueryParameter("limit", "25").addQueryParameter("raw_json", "1")
             .addQueryParameter("t", "all").addQueryParameter("sort", if (request.sort == SortOrder.NEWEST) "new" else "relevance")
             .apply { cursor?.let { addQueryParameter("after", it.token) } }.build()
@@ -21,8 +22,9 @@ class RedditProvider(
         val items = rows.mapIndexedNotNull { index, wrapper ->
             val row = wrapper.obj("data")
             val path = row.text("permalink").takeIf { it.startsWith("/r/") } ?: return@mapIndexedNotNull null
-            SearchItem(row.text("name"), source, row.text("title"), "https://www.reddit.com$path", cleanHtml(row.text("selftext")),
-                row.text("author"), epoch(row.decimal("created_utc")), (cursor?.offset ?: 0) + index + 1, row.text("subreddit_name_prefixed"))
+            val body = fullText(row.text("selftext"))
+            SearchItem(row.text("name"), source, row.text("title"), "https://www.reddit.com$path", query.snippet(body),
+                row.text("author"), epoch(row.decimal("created_utc")), (cursor?.offset ?: 0) + index + 1, row.text("subreddit_name_prefixed"), searchText = body)
         }
         return SourcePage(items, data.text("after").takeIf { it.isNotBlank() }?.let { SearchCursor(it, (cursor?.offset ?: 0) + rows.size) },
             "Reddit-Posts; Datumsfilter lokal. Ältere Treffer können trotz Blättern fehlen.")

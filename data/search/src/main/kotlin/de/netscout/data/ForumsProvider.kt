@@ -15,11 +15,12 @@ class ForumsProvider(
     override val source = SearchSource.FORUMS
     private val sites = listOf("stackoverflow", "superuser", "serverfault")
     override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage = coroutineScope {
+        val query = request.keywordQuery
         val page = cursor?.token?.toIntOrNull() ?: 1
         val responses = sites.map { site -> async {
             try {
                 val url = baseUrl.newBuilder().addPathSegments("search/advanced")
-                    .addQueryParameter("site", site).addQueryParameter("q", request.keywords)
+                    .addQueryParameter("site", site).addQueryParameter("q", query.remoteQuery)
                     .addQueryParameter("page", page.toString()).addQueryParameter("pagesize", "15")
                     .addQueryParameter("filter", "withbody").addQueryParameter("order", "desc")
                     .addQueryParameter("sort", if (request.sort == SortOrder.NEWEST) "creation" else "relevance")
@@ -39,9 +40,10 @@ class ForumsProvider(
         if (successes.isEmpty()) throw responses.first().exceptionOrNull()!!
         val items = responses.flatMapIndexed { siteIndex, response ->
             response.getOrNull()?.rows("items").orEmpty().mapIndexed { index, row ->
+                val body = fullText(row.text("body"))
                 SearchItem("${sites[siteIndex]}:${row.text("question_id")}", source, cleanHtml(row.text("title")), row.text("link"),
-                    cleanHtml(row.text("body")), cleanHtml(row.obj("owner").text("display_name")), epoch(row.decimal("creation_date")),
-                    (cursor?.offset ?: 0) + index * sites.size + siteIndex + 1, sites[siteIndex], row.text("content_license").ifBlank { "CC BY-SA" })
+                    query.snippet(body), cleanHtml(row.obj("owner").text("display_name")), epoch(row.decimal("creation_date")),
+                    (cursor?.offset ?: 0) + index * sites.size + siteIndex + 1, sites[siteIndex], row.text("content_license").ifBlank { "CC BY-SA" }, searchText = body)
             }
         }
         val next = if (successes.any { it.flag("has_more") }) SearchCursor((page + 1).toString(), (cursor?.offset ?: 0) + 45) else null

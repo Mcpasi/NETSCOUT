@@ -6,19 +6,20 @@ import java.util.Locale
 data class SearchHit(val item: SearchItem, val sources: Set<SearchSource>, val relevance: Double)
 
 object ResultMerger {
+    private data class Candidate(val item: SearchItem, val match: KeywordQuery.Match)
     fun merge(request: SearchRequest, items: List<SearchItem>): List<SearchHit> {
-        val terms = Regex("[\\p{L}\\p{N}]+").findAll(request.keywords.lowercase(Locale.ROOT)).map { it.value }.toSet()
+        val query = request.keywordQuery
         val hits = items.asSequence()
             .filter { it.source in request.sources && request.includes(it.publishedAt) && safeWebUrl(it.url) }
-            .groupBy { canonicalUrl(it.url) }
+            .mapNotNull { item -> query.match(item.title, item.searchText)?.let { Candidate(item, it) } }
+            .groupBy { canonicalUrl(it.item.url) }
             .map { (_, group) ->
-                val best = group.minBy { it.rank }
+                val candidate = group.sortedWith(compareByDescending<Candidate> { it.match.titleCoverage }.thenBy { it.item.rank }).first()
+                val best = candidate.item
                 // Reciprocal rank fusion avoids comparing incompatible provider scores.
-                val rrf = group.groupBy { it.source }.values.sumOf { rows -> 1.0 / (60 + rows.minOf { it.rank.coerceAtLeast(1) }) }
-                val title = best.title.lowercase(Locale.ROOT)
-                val coverage = if (terms.isEmpty()) 0.0 else terms.count { title.contains(it) }.toDouble() / terms.size
-                val merged = best.copy(publishedAt = best.publishedAt ?: group.mapNotNull { it.publishedAt }.minOrNull())
-                SearchHit(merged, group.map { it.source }.toSet(), rrf * (1.0 + 0.25 * coverage))
+                val rrf = group.groupBy { it.item.source }.values.sumOf { rows -> 1.0 / (60 + rows.minOf { it.item.rank.coerceAtLeast(1) }) }
+                val merged = best.copy(publishedAt = best.publishedAt ?: group.mapNotNull { it.item.publishedAt }.minOrNull())
+                SearchHit(merged, group.map { it.item.source }.toSet(), 4.0 * candidate.match.titleCoverage + 0.25 * candidate.match.textCoverage + rrf)
             }
         return when (request.sort) {
             SortOrder.NEWEST -> hits.sortedWith(compareByDescending<SearchHit> { it.item.publishedAt }.thenByDescending { it.relevance }.thenBy { it.item.url })

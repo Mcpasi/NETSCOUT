@@ -29,4 +29,9 @@ class SearchRequestTest {
     @Test fun `normalization keeps keywords and quoted phrases`() {
         assertEquals("\"Kotlin Android\" privacy", request.copy(keywords = "  \"Kotlin Android\"   privacy \n").normalized().keywords)
     }
+    @Test fun `punctuation only and unclosed phrases cannot produce unfiltered queries`() {
+        assertNotNull(request.copy(keywords = ",,;;&&").validationError())
+        assertNotNull(request.copy(keywords = "\"codex android").validationError())
+        assertNull(request.copy(keywords = "Codex,mobile,android").validationError())
+    }
 }

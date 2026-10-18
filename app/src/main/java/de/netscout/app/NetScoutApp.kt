@@ -36,6 +36,9 @@ import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.buildAnnotatedString
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
@@ -94,6 +97,7 @@ fun NetScoutApp(model: SearchViewModel) {
                                 leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }),
                             )
+                            Text("Alle Keywords erforderlich · Komma oder Leerzeichen trennen · \"genaue Phrase\" · alle Sprachen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 DateField("Von", state.from, { dateField = "from" }, { model.from(null) }, Modifier.weight(1f))
                                 DateField("Bis", state.until, { dateField = "until" }, { model.until(null) }, Modifier.weight(1f))
@@ -160,10 +164,11 @@ fun NetScoutApp(model: SearchViewModel) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("${state.results.size} Treffer", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
                             Text("Für „${state.activeRequest!!.keywords}“ · ${state.activeRequest!!.sort.label}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (state.unmatchedCount > 0) Text("${state.unmatchedCount} Ergebnisse ohne alle Keywords ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (state.filtersChanged) Text("Filter geändert. Starte die Suche erneut.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
-                    items(state.results, key = { ResultMerger.canonicalUrl(it.item.url) }) { hit -> ResultCard(hit) }
+                    items(state.results, key = { ResultMerger.canonicalUrl(it.item.url) }) { hit -> ResultCard(hit, state.activeRequest!!.keywords) }
                     if (!state.isSearching && state.results.isEmpty()) {
                         item {
                             Text(if (state.outcomes.values.none { it.status == SourceStatus.SUCCESS }) "Noch keine Quelle hat Ergebnisse geliefert. Prüfe die Hinweise oben und versuche es erneut."
@@ -262,22 +267,24 @@ private fun SourceStatusRow(source: SearchSource, outcome: SourceOutcome?, count
 }
 
 @Composable
-private fun ResultCard(hit: SearchHit) {
+private fun ResultCard(hit: SearchHit, keywords: String) {
     val context = LocalContext.current
     fun open(url: String) {
         try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
         catch (_: ActivityNotFoundException) { Toast.makeText(context, "Keine App zum Öffnen des Links gefunden.", Toast.LENGTH_SHORT).show() }
     }
     val row = hit.item
+    val query = remember(keywords) { KeywordQuery.parse(keywords) }
+    val highlight = MaterialTheme.colorScheme.primary
     Surface(onClick = { open(row.url) }, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .4f))) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Text(hit.sources.joinToString(" + ") { it.label } + " · " + (row.publishedAt?.atZone(ZoneOffset.UTC)?.toLocalDate()?.format(DateFormat) ?: "Datum unbekannt"),
                 style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(row.title.ifBlank { row.url }, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
+                Text(highlighted(row.title.ifBlank { row.url }, query, highlight), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = "Treffer im Browser öffnen", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (row.snippet.isNotBlank()) Text(row.snippet, maxLines = 4, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (row.snippet.isNotBlank()) Text(highlighted(row.snippet, query, highlight), maxLines = 6, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(listOf(row.author, row.context).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             row.license?.let { license ->
                 Text(license, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,
@@ -285,6 +292,11 @@ private fun ResultCard(hit: SearchHit) {
             }
         }
     }
+}
+
+private fun highlighted(text: String, query: KeywordQuery, color: Color) = buildAnnotatedString {
+    append(text)
+    query.ranges(text).forEach { addStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold), it.first, it.last + 1) }
 }
 
 @Composable

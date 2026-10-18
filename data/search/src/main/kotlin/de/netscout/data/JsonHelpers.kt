@@ -27,6 +27,7 @@ internal fun JsonObject.requireRows(key: String): List<JsonObject> {
 }
 internal fun JsonObject.array(key: String) = get(key) as? JsonArray ?: JsonArray(emptyList())
 internal fun cleanHtml(text: String) = Jsoup.parse(text).text().trim().take(700)
+internal fun fullText(text: String) = Jsoup.parse(text).text().trim()
 internal fun parseDate(text: String): Instant? = runCatching { Instant.parse(text) }.getOrNull()
     ?: runCatching { OffsetDateTime.parse(text).toInstant() }.getOrNull()
     ?: runCatching { LocalDate.parse(text.take(10)).atStartOfDay().toInstant(ZoneOffset.UTC) }.getOrNull()
