@@ -17,7 +17,8 @@ object ResultMerger {
                 val rrf = group.groupBy { it.source }.values.sumOf { rows -> 1.0 / (60 + rows.minOf { it.rank.coerceAtLeast(1) }) }
                 val title = best.title.lowercase(Locale.ROOT)
                 val coverage = if (terms.isEmpty()) 0.0 else terms.count { title.contains(it) }.toDouble() / terms.size
-                SearchHit(best, group.map { it.source }.toSet(), rrf * (1.0 + 0.25 * coverage))
+                val merged = best.copy(publishedAt = best.publishedAt ?: group.mapNotNull { it.publishedAt }.minOrNull())
+                SearchHit(merged, group.map { it.source }.toSet(), rrf * (1.0 + 0.25 * coverage))
             }
         return when (request.sort) {
             SortOrder.NEWEST -> hits.sortedWith(compareByDescending<SearchHit> { it.item.publishedAt }.thenByDescending { it.relevance }.thenBy { it.item.url })

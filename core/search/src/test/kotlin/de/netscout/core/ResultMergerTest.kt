@@ -13,10 +13,11 @@ class ResultMergerTest {
     @Test fun `tracking variants collapse and merge their source evidence`() {
         val hits = ResultMerger.merge(request, listOf(
             item("1", "https://www.example.org/post/?utm_source=github#comment"),
-            item("2", "http://example.org/post?fbclid=tracking", source = SearchSource.WEB),
+            item("2", "http://example.org/post?fbclid=tracking", date = "2026-01-02T12:00:00Z", source = SearchSource.WEB),
         ))
         assertEquals(1, hits.size)
         assertEquals(setOf(SearchSource.GITHUB, SearchSource.WEB), hits.single().sources)
+        assertEquals(Instant.parse("2026-01-02T12:00:00Z"), hits.single().item.publishedAt)
     }
     @Test fun `meaningful query parameters keep different videos distinct`() {
         assertEquals(2, ResultMerger.merge(request, listOf(item("1", "https://youtube.com/watch?v=one"), item("2", "https://youtube.com/watch?v=two"))).size)
