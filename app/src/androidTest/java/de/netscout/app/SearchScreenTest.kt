@@ -33,8 +33,10 @@ class SearchScreenTest {
         screenshot("search-form.png")
         compose.onNodeWithText("Keywords").performTextInput("kotlin")
         compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
-        compose.onNodeWithText("1 Treffer").performScrollTo().assertIsDisplayed()
-        compose.onNodeWithText("Kotlin Testtreffer").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("search-content").performScrollToNode(hasText("1 Treffer"))
+        compose.onNodeWithText("1 Treffer").assertIsDisplayed()
+        compose.onNodeWithTag("search-content").performScrollToNode(hasText("Kotlin Testtreffer"))
+        compose.onNodeWithText("Kotlin Testtreffer").assertIsDisplayed()
         screenshot("search-results.png")
     }
     @Test fun emptySearchShowsValidation() {
