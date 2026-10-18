@@ -25,6 +25,7 @@ class SearchEngine(
     fun search(
         input: SearchRequest,
         cursors: Map<SearchSource, SearchCursor?> = input.sources.associateWith { null },
+        onProgress: (SourceProgress) -> Unit = {},
     ): Flow<SourceOutcome> = channelFlow {
         val request = input.normalized()
         require(request.validationError() == null) { request.validationError().orEmpty() }
@@ -38,8 +39,10 @@ class SearchEngine(
                     return@launch
                 }
                 val outcome = try {
+                    onProgress(SourceProgress(source, SourcePhase.FETCHING))
                     val provider = providers[source] ?: throw SourceException(SourceStatus.SETUP_REQUIRED, "Quelle noch nicht eingerichtet.")
                     val page = withTimeout(timeoutMillis) { provider.search(request, cursor) }
+                    onProgress(SourceProgress(source, SourcePhase.ASSESSING, page.items.size))
                     // Model loading/inference has its own budget and remains cancellable.
                     SourceOutcome(source, SourceStatus.SUCCESS, withTimeout(60_000) { relevance.assess(request, page) })
                 } catch (_: TimeoutCancellationException) {

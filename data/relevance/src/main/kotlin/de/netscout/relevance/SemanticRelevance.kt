@@ -17,14 +17,17 @@ fun interface PassageScorer {
 class SemanticRelevance(private val scorerFactory: () -> PassageScorer) : SearchRelevance {
     private val mutex = Mutex()
     private val scorer by lazy(scorerFactory)
+    // A sentence-initial personal reference can carry an immediately preceding subject.
+    private val continuation = Regex("^(?:[Ii]t|[Ee]s|[Ee]r|[Ss]ie)[\\s\\p{Z}]+")
 
     override suspend fun assess(request: SearchRequest, page: SourcePage): SourcePage {
         if (page.items.isEmpty()) return page
         return withContext(Dispatchers.Default) {
             try {
-                val passages = page.items.map { PassageSelector.select(request.keywordQuery, it) }
+                val passages = page.items.map { PassageSelector.semanticCandidates(request.keywordQuery, it) }
                 val flattened = passages.flatten()
                 val scores = mutableListOf<Double>()
+                val connected = BooleanArray(flattened.size) { true }
                 // One model/session and bounded batches keep CPU/memory use predictable on Android.
                 mutex.withLock {
                     for (batch in flattened.chunked(4)) {
@@ -33,12 +36,34 @@ class SemanticRelevance(private val scorerFactory: () -> PassageScorer) : Search
                         require(result.size == batch.size && result.all(Double::isFinite))
                         scores.addAll(result.toList())
                     }
+                    val continuityCache = mutableMapOf<Pair<String, String>, Boolean>()
+                    flattened.forEachIndexed { index, passage ->
+                        currentCoroutineContext().ensureActive()
+                        if (scores[index] >= 0.0 && passage.contextBlocks.isNotEmpty()) {
+                            val blocks = passage.contextBlocks
+                            connected[index] = blocks.size <= 4 && blocks.drop(1).all { block ->
+                                val pair = blocks.first() to block
+                                val anchorEnd = passage.text.indexOf(pair.first) + pair.first.length
+                                val blockStart = passage.text.indexOf(block, anchorEnd)
+                                val adjacent = blockStart >= anchorEnd && passage.text.substring(anchorEnd, blockStart).isBlank()
+                                if (adjacent && continuation.containsMatchIn(block)) return@all true
+                                continuityCache.getOrPut(pair) {
+                                    // Query/passage encoding is asymmetric. Compare both directions;
+                                    // unrelated sections can otherwise get a high whole-window score.
+                                    val forward = scorer.score(pair.first, listOf(pair.second))
+                                    val backward = scorer.score(pair.second, listOf(pair.first))
+                                    require(forward.size == 1 && backward.size == 1 && forward[0].isFinite() && backward[0].isFinite())
+                                    maxOf(forward[0], backward[0]) >= MIN_CONTINUITY_SCORE
+                                }
+                            }
+                        }
+                    }
                 }
                 currentCoroutineContext().ensureActive()
                 var offset = 0
                 page.copy(items = page.items.mapIndexed { index, item ->
                     val options = passages[index]
-                    val best = options.indices.maxByOrNull { scores[offset + it] }
+                    val best = options.indices.filter { connected[offset + it] }.maxByOrNull { scores[offset + it] }
                     val score = best?.let { scores[offset + it] } ?: Double.NEGATIVE_INFINITY
                     offset += options.size
                     val evidence = best?.let { options[it].text }.orEmpty()
@@ -53,5 +78,10 @@ class SemanticRelevance(private val scorerFactory: () -> PassageScorer) : Search
                 throw SourceException(SourceStatus.ERROR, "Inhaltliche Trefferprüfung fehlgeschlagen. Bitte die Suche erneut starten.")
             }
         }
+    }
+
+    private companion object {
+        // Empirical raw-logit cutoff for block-to-block retrieval, not a probability.
+        const val MIN_CONTINUITY_SCORE = -5.0
     }
 }

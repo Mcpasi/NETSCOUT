@@ -5,6 +5,20 @@ import org.junit.Test
 import java.util.Locale
 
 class KeywordQueryTest {
+    @Test fun `pasted unicode spaces separate every required keyword`() {
+        val query = KeywordQuery.parse("Codex\u00a0mobile\u2003Android")
+        assertEquals(listOf("Codex", "mobile", "Android"), query.terms)
+        assertNotNull(query.match("Codex mobile for Android", ""))
+        assertNull(query.match("Codex mobile for iOS", ""))
+    }
+
+    @Test fun `quoted phrases normalize unicode whitespace in input and evidence`() {
+        val query = KeywordQuery.parse("\"local\u00a0llm\",Android")
+        assertEquals(listOf("local llm", "Android"), query.terms)
+        assertNotNull(query.match("Local\u2003LLM for Android", ""))
+        assertNull(query.match("Local models for Android", "LLM"))
+    }
+
     @Test fun `user regression comma separated keywords require all three terms`() {
         val query = KeywordQuery.parse("Codex,mobile,android")
         assertEquals(listOf("Codex", "mobile", "android"), query.terms)

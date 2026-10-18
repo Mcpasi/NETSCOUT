@@ -9,6 +9,31 @@ class SemanticRelevanceTest {
     private val request = SearchRequest("Codex,mobile,Android", setOf(SearchSource.GITHUB))
     private fun item(id: String, title: String, text: String = "") = SearchItem(id, SearchSource.GITHUB, title, "https://example.org/$id", searchText = text)
 
+    @Test fun `wider context needs continuity even when the complete window scores highly`() = runBlocking {
+        val relevance = SemanticRelevance { PassageScorer { query, passages ->
+            DoubleArray(passages.size) { if (query == "Codex mobile Android") 8.0 else -8.0 }
+        } }
+        val page = relevance.assess(request, SourcePage(listOf(
+            item("notes", "Weekly notes", "Codex support for web.\nMobile Safari layout fixes.\nAndroid permissions changed."),
+            item("client", "New client", "A mobile client for Codex.\n\nIt runs on Android."),
+            item("unrelated-reference", "Mobile updates", "Codex supports web.\nThe alarm on a phone failed.\nIt runs on Android."),
+        )))
+        assertFalse(page.items.first().assessment!!.accepted)
+        assertTrue(page.items[1].assessment!!.accepted)
+        assertEquals("A mobile client for Codex.\n\nIt runs on Android.", page.items[1].snippet)
+        assertFalse(page.items.last().assessment!!.accepted)
+    }
+
+    @Test fun `a useful later passage is assessed alongside short keyword mentions`() = runBlocking {
+        val relevance = SemanticRelevance { PassageScorer { _, passages ->
+            passages.map { if ("native" in it) 8.0 else -2.0 }.toDoubleArray()
+        } }
+        val text = "Codex mobile Android overview.\nCodex mobile Android comparison.\nA native Codex mobile Android client lets you control the coding agent from your phone."
+        val page = relevance.assess(request, SourcePage(listOf(item("client", "Project", text))))
+        assertTrue(page.items.single().assessment!!.accepted)
+        assertTrue(page.items.single().snippet.contains("native"))
+    }
+
     @Test fun `semantic scores determine order and rejected passages cannot leak into newest results`() = runBlocking {
         val relevance = SemanticRelevance { PassageScorer { _, passages ->
             passages.map { if ("native" in it) 8.0 else -2.0 }.toDoubleArray()

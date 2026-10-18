@@ -21,7 +21,9 @@ data class SearchUiState(
     val activeRequest: SearchRequest? = null,
     val results: List<SearchHit> = emptyList(),
     val outcomes: Map<SearchSource, SourceOutcome> = emptyMap(),
+    val sourceProgress: Map<SearchSource, SourceProgress> = emptyMap(),
     val sourceCounts: Map<SearchSource, Int> = emptyMap(),
+    val candidateCounts: Map<SearchSource, Int> = emptyMap(),
     val unmatchedCount: Int = 0,
     val isSearching: Boolean = false,
     val error: String? = null,
@@ -58,7 +60,7 @@ class SearchViewModel(
         request.validationError()?.let { message -> mutableState.update { it.copy(error = message) }; return }
         cancel()
         items.clear()
-        mutableState.update { it.copy(activeRequest = request, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap(), unmatchedCount = 0, error = null) }
+        mutableState.update { it.copy(activeRequest = request, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap(), candidateCounts = emptyMap(), unmatchedCount = 0, error = null) }
         execute(request, request.sources.associateWith { null })
     }
 
@@ -72,15 +74,19 @@ class SearchViewModel(
     fun cancel() {
         generation++
         job?.cancel()
-        mutableState.update { it.copy(isSearching = false) }
+        mutableState.update { it.copy(isSearching = false, sourceProgress = emptyMap()) }
     }
 
     private fun execute(request: SearchRequest, cursors: Map<SearchSource, SearchCursor?>) {
         val currentGeneration = ++generation
-        mutableState.update { it.copy(isSearching = true) }
+        mutableState.update { it.copy(isSearching = true, sourceProgress = cursors.keys.associateWith { source -> SourceProgress(source, SourcePhase.FETCHING) }) }
         job = viewModelScope.launch {
             try {
-                engine.search(request, cursors).collect { outcome ->
+                engine.search(request, cursors, onProgress = { progress ->
+                    if (currentGeneration == generation) mutableState.update { current ->
+                        current.copy(sourceProgress = current.sourceProgress + (progress.source to progress))
+                    }
+                }).collect { outcome ->
                     if (currentGeneration != generation) return@collect
                     if (outcome.status == SourceStatus.SUCCESS) {
                         items[outcome.source] = (items[outcome.source].orEmpty() + outcome.page.items).distinctBy { it.id to it.url }
@@ -90,14 +96,16 @@ class SearchViewModel(
                         val saved = if (outcome.status != SourceStatus.SUCCESS) outcome.copy(page = current.outcomes[outcome.source]?.page ?: outcome.page) else outcome
                         current.copy(
                             outcomes = current.outcomes + (outcome.source to saved),
+                            sourceProgress = current.sourceProgress - outcome.source,
                             sourceCounts = items.mapValues { (_, rows) -> ResultMerger.merge(request, rows).size },
+                            candidateCounts = items.mapValues { (_, rows) -> rows.size },
                             unmatchedCount = items.values.sumOf { rows -> rows.count { !(it.assessment ?: ContextRelevance.assessment(request, it)).accepted } },
                             results = ResultMerger.merge(request, items.values.flatten()),
                         )
                     }
                 }
             } finally {
-                if (currentGeneration == generation) mutableState.update { it.copy(isSearching = false) }
+                if (currentGeneration == generation) mutableState.update { it.copy(isSearching = false, sourceProgress = emptyMap()) }
             }
         }
     }
@@ -111,7 +119,7 @@ class SearchViewModel(
             cancel()
             engine = engineFactory(settings)
             items.clear()
-            mutableState.update { it.copy(settings = settings, settingsWarning = null, activeRequest = null, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap(), unmatchedCount = 0) }
+            mutableState.update { it.copy(settings = settings, settingsWarning = null, activeRequest = null, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap(), candidateCounts = emptyMap(), unmatchedCount = 0) }
             null
         } catch (_: Exception) { "Zugänge konnten nicht verschlüsselt gespeichert werden. Bitte erneut versuchen." }
     }

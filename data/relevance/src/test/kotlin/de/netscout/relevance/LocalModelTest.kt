@@ -59,4 +59,39 @@ class LocalModelTest {
             assertEquals("app", ResultMerger.merge(request, page.items).single().item.id)
         }
     }
+
+    @Test fun `real model confirms a common topic explained over adjacent sentences`() = runBlocking {
+        scorer().use { model ->
+            val request = SearchRequest("Codex,mobile,Android", setOf(SearchSource.HACKER_NEWS))
+            val text = "Control Codex from a mobile client. It runs on Android."
+            val page = SemanticRelevance { model }.assess(request, SourcePage(listOf(
+                SearchItem("client", SearchSource.HACKER_NEWS, "New coding agent client", "https://example.org/client", searchText = text),
+                SearchItem("partial", SearchSource.HACKER_NEWS, "Codex mobile client for iOS", "https://example.org/partial"),
+            )))
+            assertTrue(page.items.first().assessment!!.accepted)
+            assertEquals(text, page.items.first().snippet)
+            assertFalse(page.items.last().assessment!!.accepted)
+            assertEquals("client", ResultMerger.merge(request, page.items).single().item.id)
+        }
+    }
+
+    @Test fun `real model retains a project introduction followed by its platform paragraph`() = runBlocking {
+        scorer().use { model ->
+            val request = SearchRequest("Codex,mobile,Android", setOf(SearchSource.HACKER_NEWS))
+            val text = "An open source interface for Codex and other coding agents.\n\nThe mobile app runs on iOS and Android."
+            val notes = "Codex support for web.\nMobile Safari layout fixes.\nAndroid notification permissions updated."
+            val page = SemanticRelevance { model }.assess(request, SourcePage(listOf(
+                SearchItem("client", SearchSource.HACKER_NEWS, "Remote coding agent client", "https://example.org/client", searchText = text),
+                SearchItem("notes", SearchSource.HACKER_NEWS, "General release notes", "https://example.org/notes", searchText = notes),
+            )))
+            assertTrue(page.items.first().assessment!!.accepted)
+            assertTrue(text.contains(page.items.first().snippet))
+            assertFalse(page.items.last().assessment!!.accepted)
+            val other = SemanticRelevance { model }.assess(request.copy(keywords = "rust,async,database"), SourcePage(listOf(
+                SearchItem("rust", SearchSource.HACKER_NEWS, "New client library", "https://example.org/rust",
+                    searchText = "An async client written in Rust.\n\nIt connects to a database without blocking."),
+            )))
+            assertTrue(other.items.single().assessment!!.accepted)
+        }
+    }
 }

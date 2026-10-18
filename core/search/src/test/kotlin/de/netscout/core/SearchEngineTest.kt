@@ -14,6 +14,30 @@ class SearchEngineTest {
     }
     private val request = SearchRequest("kotlin", setOf(SearchSource.GITHUB, SearchSource.HACKER_NEWS))
 
+    @Test fun `source progress distinguishes retrieval from assessment without exposing unchecked items`() = runTest {
+        val fetched = CompletableDeferred<SourcePage>()
+        val assessed = CompletableDeferred<Unit>()
+        val progress = mutableListOf<SourceProgress>()
+        val outcomes = mutableListOf<SourceOutcome>()
+        val page = SourcePage(listOf(SearchItem("1", SearchSource.HACKER_NEWS, "Kotlin", "https://example.org/1")))
+        val engine = SearchEngine(listOf(provider(SearchSource.HACKER_NEWS) { fetched.await() }), relevance = SearchRelevance { _, result ->
+            assessed.await()
+            result
+        })
+        val input = request.copy(sources = setOf(SearchSource.HACKER_NEWS))
+        val job = launch { engine.search(input, onProgress = progress::add).toList(outcomes) }
+        runCurrent()
+        assertEquals(listOf(SourceProgress(SearchSource.HACKER_NEWS, SourcePhase.FETCHING)), progress)
+        fetched.complete(page); runCurrent()
+        assertEquals(SourceProgress(SearchSource.HACKER_NEWS, SourcePhase.ASSESSING, 1), progress.last())
+        assertTrue(outcomes.isEmpty())
+        assessed.complete(Unit); advanceUntilIdle(); job.join()
+        assertEquals(SourceStatus.SUCCESS, outcomes.single().status)
+        progress.clear()
+        assertTrue(engine.search(input, onProgress = progress::add).toList().single().cached)
+        assertTrue(progress.isEmpty())
+    }
+
     @Test fun `source failure does not cancel other sources and results arrive independently`() = runTest {
         val engine = SearchEngine(listOf(
             provider(SearchSource.GITHUB) { delay(2_000); SourcePage(emptyList()) },

@@ -16,7 +16,7 @@ dependencies {
 tasks.register<JavaExec>("checkLiveSearch") {
     dependsOn("testClasses", ":data:relevance:prepareModel")
     group = "verification"
-    description = "Opt-in check of real public GitHub/HN search results (consumes API quota)"
+    description = "Opt-in check of real public GitHub/HN/forum search results (consumes API quota)"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("de.netscout.data.LiveSearchCheck")
     args(providers.gradleProperty("searchKeywords").getOrElse("Codex,mobile,android"))

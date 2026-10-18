@@ -4,9 +4,9 @@ Ein erster nativer Kotlin-/Jetpack-Compose-Prototyp für eine quellenübergreife
 
 - Keywords, optionale Von-/Bis-Daten und sechs auswählbare Quellen.
 - Gemeinsames Suchthema statt bloßer Wortvorkommen: Kandidaten werden anhand zusammengehöriger Textstellen und eines lokalen mehrsprachigen Relevanzmodells bewertet. `Codex,mobile,android` ist eine beliebige Beispielanfrage; keine Begriffe sind im Produktionscode festgelegt.
-- Kommas, Semikolons und Leerzeichen trennen Keywords; Anführungszeichen gruppieren genaue Phrasen.
+- Kommas, Semikolons und Leerzeichen einschließlich kopierter Unicode-Leerzeichen trennen Keywords; Anführungszeichen gruppieren genaue Phrasen. Die Oberfläche zeigt alle erkannten, erforderlichen Begriffe.
 - Neueste Beiträge oder höchste Relevanz; die Sortier-Checkboxen sind gegenseitig exklusiv.
-- Echte Treffer, Links zur Originalquelle, Quellenstatus und weitere Ergebnisse per Pagination.
+- Echte Treffer, Links zur Originalquelle, Quellenstatus mit Abfrage-/Prüfphase und Kandidatenzahl sowie weitere Ergebnisse per Pagination. Nach dem Suchstart wird der Quellenstatus eingeblendet.
 - Parallele Quellenabfragen; Fehler einzelner Plattformen beeinträchtigen die übrigen nicht.
 - Optional verschlüsselt gespeicherte Zugänge, Speicher-Cache für erfolgreiche Seiten, Abbruch und API-Pausen.
 
@@ -35,7 +35,7 @@ Es gibt keinen verlässlichen, unbegrenzt kostenlosen Vollzugriff auf alle Platt
 
 Die Datumsgrenzen beziehen sich auf **Veröffentlichung/Erstellung in UTC**, einschließlich beider ausgewählter Tage. Soweit die API es unterstützt, werden Grenzen bereits an die Quelle übergeben; danach wird zentral erneut exakt gefiltert. Reddit und SearXNG werden lokal gefiltert. Treffer ohne bekanntes Datum werden bei aktivem Datumsfilter ausgeschlossen. Weitere Seiten können dann nötig sein; eine vollständige historische Suche ist nicht garantiert. „Neueste“ sortiert die **geladenen** Treffer, unbekannte Daten stehen am Ende.
 
-Seit 0.2.0 genügt ein Vorkommen aller Wörter irgendwo im Beitrag nicht mehr: Titel und eine zusammenhängende Textstelle müssen die Keywords gemeinsam belegen. Drei unabhängige Release-Note-Abschnitte für „Codex“, „mobile“ und „Android“ werden verworfen. Ein mehrsprachiger Cross-Encoder bewertet anschließend den inhaltlichen Bezug von Suchanfrage und Textstelle. Bei langen Texten wird vor dem Kürzen geprüft; die Vorschau zeigt die bewertete Originalstelle mit Hervorhebung. Der Quellenstatus zählt bestätigte Treffer. Verworfenes bleibt bei der Pagination berücksichtigt, damit nach einer leeren gefilterten Seite weitergesucht werden kann.
+Seit 0.2.0 genügt ein Vorkommen aller Wörter irgendwo im Beitrag nicht mehr: Titel und eine zusammenhängende Textstelle müssen die Keywords gemeinsam belegen. Eine Textstelle kann auch zwei benachbarte Sätze desselben Absatzes umfassen. Fehlt dort ein vollständiger Beleg, prüft das lokale Modell außerdem Originalstellen bis 1.000 Zeichen über Absatzgrenzen hinweg, mit einer zusätzlichen Prüfung des Bezugs zwischen den benötigten Abschnitten. Drei unabhängige Release-Note-Abschnitte für „Codex“, „mobile“ und „Android“ werden weiterhin verworfen. Bei langen Texten werden vollständige Trefferfenster über alle Vorkommen gesucht; die aufklappbare Vorschau zeigt die bewertete Originalstelle mit Hervorhebung. Bis zu vier Textstellen pro Kandidat verhindern, dass zwei kurze Erwähnungen eine spätere Erklärung verdrängen. Ein passender Titel verdeckt dabei keine stärkeren Textbelege. Der Quellenstatus unterscheidet laufende Abfragen, die Inhaltsprüfung geladener Kandidaten und bestätigte Treffer. Auch eine erfolgreiche Antwort ohne Kandidaten wird ausdrücklich angezeigt. Verworfenes bleibt bei der Pagination berücksichtigt, damit nach einer leeren gefilterten Seite weitergesucht werden kann.
 
 Die Relevanzsortierung nutzt primär den gelernten Modellwert; Reciprocal Rank Fusion (`1 / (60 + Rang)`) dient mit kleinem Gewicht als Tie-Breaker. Inkompatible Popularitätswerte verschiedener Plattformen werden nicht vermischt. Identische URLs werden über Quellen und Seiten zusammengeführt, Trackingparameter und Fragmente ignoriert. Bedeutungsvolle Parameter wie YouTube-Video-IDs bleiben erhalten.
 
@@ -63,11 +63,13 @@ GitHub Actions führt Unit-Tests einschließlich echter Modellinferenz und Token
 
 Nach den Emulator-Tests wird außerdem die tatsächliche APK installiert und über ihre Launcher-Activity gestartet. Eine Bildschirmaufnahme dieses Startchecks liegt im Artefakt `android-ui-tests`.
 
-Ein optionaler Integrationstest prüft echte GitHub-/HN-Abfragen mit dem gemeldeten Suchbeispiel und gibt bestätigte Treffer aus. Er verbraucht API-Kontingent und läuft deshalb nicht automatisch in CI:
+Ein optionaler Integrationstest prüft echte GitHub-/HN-/Foren-Abfragen mit einem bestehenden Suchbeispiel und gibt Abfragephasen, Kandidatenzahlen und bestätigte Treffer aus. Er verbraucht API-Kontingent und läuft deshalb nicht automatisch in CI:
 
 ```sh
 ./gradlew :data:search:checkLiveSearch -PsearchKeywords=Codex,mobile,android
 ```
+
+Reproduktion der vor der Korrektur nachgewiesenen Suchfehler: [docs/search-regressions.md](docs/search-regressions.md).
 
 ## Architektur und Erweiterung
 

@@ -26,6 +26,72 @@ class SearchViewModelTest {
                 if (source == SearchSource.GITHUB) action(request, cursor) else SourcePage(emptyList())
         } })
     }
+
+    @Test fun `HN forums and GitHub start together and report retrieval assessment and confirmed counts`() = runTest(dispatcher) {
+        val sources = setOf(SearchSource.GITHUB, SearchSource.HACKER_NEWS, SearchSource.FORUMS)
+        val pages = sources.associateWith { CompletableDeferred<SourcePage>() }
+        val calls = mutableSetOf<SearchSource>()
+        val assessment = CompletableDeferred<Unit>()
+        val model = SearchViewModel(Store()) {
+            SearchEngine(sources.map { source -> object : SearchProvider {
+                override val source = source
+                override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
+                    calls.add(source)
+                    return pages.getValue(source).await()
+                }
+            } }, relevance = SearchRelevance { request, page ->
+                if (page.items.isNotEmpty()) assessment.await()
+                ContextRelevance.assess(request, page)
+            })
+        }
+        model.keywords("Codex,mobile,Android"); model.search(); runCurrent()
+        assertEquals(sources, calls)
+        assertEquals(sources, model.state.value.sourceProgress.keys)
+        assertTrue(model.state.value.sourceProgress.values.all { it.phase == SourcePhase.FETCHING })
+        pages.getValue(SearchSource.HACKER_NEWS).complete(SourcePage(listOf(
+            SearchItem("good", SearchSource.HACKER_NEWS, "Codex mobile Android", "https://example.org/good"),
+            SearchItem("partial", SearchSource.HACKER_NEWS, "Codex mobile iOS", "https://example.org/partial"),
+        )))
+        runCurrent()
+        assertEquals(SourceProgress(SearchSource.HACKER_NEWS, SourcePhase.ASSESSING, 2), model.state.value.sourceProgress[SearchSource.HACKER_NEWS])
+        assertEquals(SourcePhase.FETCHING, model.state.value.sourceProgress[SearchSource.FORUMS]?.phase)
+        assertNull(model.state.value.outcomes[SearchSource.HACKER_NEWS])
+        assertTrue(model.state.value.results.isEmpty())
+        pages.getValue(SearchSource.GITHUB).complete(SourcePage(emptyList()))
+        pages.getValue(SearchSource.FORUMS).complete(SourcePage(emptyList()))
+        assessment.complete(Unit); advanceUntilIdle()
+        assertEquals(sources, model.state.value.outcomes.keys)
+        assertTrue(model.state.value.sourceProgress.isEmpty())
+        assertEquals(2, model.state.value.candidateCounts[SearchSource.HACKER_NEWS])
+        assertEquals(1, model.state.value.sourceCounts[SearchSource.HACKER_NEWS])
+        assertEquals("good", model.state.value.results.single().item.id)
+    }
+
+    @Test fun `loading another HN and forums page exposes progress despite prior success and cancellation clears it`() = runTest(dispatcher) {
+        val nextPage = CompletableDeferred<Unit>()
+        val sources = setOf(SearchSource.HACKER_NEWS, SearchSource.FORUMS)
+        val model = SearchViewModel(Store()) {
+            SearchEngine(sources.map { source -> object : SearchProvider {
+                override val source = source
+                override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
+                    if (cursor != null) nextPage.await()
+                    return SourcePage(listOf(SearchItem(source.name, source, "Kotlin", "https://example.org/${source.name}")), SearchCursor("2"))
+                }
+            } })
+        }
+        model.toggle(SearchSource.GITHUB)
+        model.keywords("kotlin"); model.search(); advanceUntilIdle()
+        assertEquals(2, model.state.value.results.size)
+        model.loadMore(); runCurrent()
+        assertEquals(sources, model.state.value.sourceProgress.keys)
+        assertTrue(model.state.value.sourceProgress.values.all { it.phase == SourcePhase.FETCHING })
+        assertTrue(model.state.value.outcomes.values.all { it.status == SourceStatus.SUCCESS })
+        model.cancel(); advanceUntilIdle()
+        assertTrue(model.state.value.sourceProgress.isEmpty())
+        assertFalse(model.state.value.isSearching)
+        assertEquals(2, model.state.value.results.size)
+        assertTrue(model.state.value.canLoadMore)
+    }
     @Test fun `invalid request performs no provider calls`() = runTest(dispatcher) {
         var calls = 0
         val model = model { _, _ -> calls++; SourcePage(emptyList()) }

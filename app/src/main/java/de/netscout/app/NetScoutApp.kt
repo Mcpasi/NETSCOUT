@@ -10,6 +10,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.RoundedCornerShape
@@ -47,6 +48,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.netscout.core.*
 import de.netscout.data.ApiSettings
+import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -61,7 +63,17 @@ fun NetScoutApp(model: SearchViewModel) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var dateField by rememberSaveable { mutableStateOf<String?>(null) }
     val focus = LocalFocusManager.current
-    val search = { focus.clearFocus(); model.search() }
+    val listState = rememberLazyListState()
+    val scope = rememberCoroutineScope()
+    val query = remember(state.keywords) { KeywordQuery.parse(state.keywords) }
+    val search = {
+        focus.clearFocus()
+        model.search()
+        if (model.state.value.isSearching && model.state.value.error == null) scope.launch {
+            listState.animateScrollToItem(if (state.settingsWarning == null) 1 else 2)
+        }
+        Unit
+    }
     Scaffold(
         topBar = {
             TopAppBar(title = {
@@ -77,6 +89,7 @@ fun NetScoutApp(model: SearchViewModel) {
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
             LazyColumn(
+                state = listState,
                 modifier = Modifier.widthIn(max = 800.dp).fillMaxSize().imePadding().testTag("search-content"),
                 contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
                 verticalArrangement = Arrangement.spacedBy(16.dp),
@@ -98,6 +111,10 @@ fun NetScoutApp(model: SearchViewModel) {
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }),
                             )
                             Text("Keywords als gemeinsames Thema · Komma oder Leerzeichen trennen · \"genaue Phrase\" · alle Sprachen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (query.terms.isNotEmpty() && query.balancedQuotes) Text(
+                                "Alle Begriffe erforderlich: " + query.terms.joinToString(" · ") { if (' ' in it) "„$it“" else it },
+                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
+                            )
                             Text("Die App bewertet den inhaltlichen Bezug der gefundenen Textstellen direkt auf deinem Gerät.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 DateField("Von", state.from, { dateField = "from" }, { model.from(null) }, Modifier.weight(1f))
@@ -156,7 +173,8 @@ fun NetScoutApp(model: SearchViewModel) {
                             Text("Quellenstatus", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
                             if (state.isSearching) LinearProgressIndicator(Modifier.fillMaxWidth())
                             state.activeRequest!!.sources.sortedBy { it.ordinal }.forEach { source ->
-                                SourceStatusRow(source, state.outcomes[source], state.sourceCounts[source] ?: 0, state.isSearching, { showSettings = true })
+                                SourceStatusRow(source, state.outcomes[source], state.sourceProgress[source], state.sourceCounts[source] ?: 0,
+                                    state.candidateCounts[source] ?: 0, { showSettings = true })
                             }
                             if (state.activeRequest!!.hasDateFilter) Text("Treffer ohne bekanntes Veröffentlichungsdatum werden ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -243,26 +261,40 @@ private fun SourceChoice(source: SearchSource, checked: Boolean, onClick: () -> 
 }
 
 @Composable
-private fun SourceStatusRow(source: SearchSource, outcome: SourceOutcome?, count: Int, running: Boolean, connect: () -> Unit) {
-    val color = when (outcome?.status) {
+private fun SourceStatusRow(source: SearchSource, outcome: SourceOutcome?, progress: SourceProgress?, count: Int, candidates: Int, connect: () -> Unit) {
+    val color = when (if (progress == null) outcome?.status else null) {
         SourceStatus.SUCCESS -> MaterialTheme.colorScheme.primary
         SourceStatus.ERROR, SourceStatus.RATE_LIMITED -> MaterialTheme.colorScheme.error
         else -> MaterialTheme.colorScheme.onSurfaceVariant
     }
-    Surface(shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface) {
+    Surface(modifier = Modifier.testTag("source-status-${source.name}"), shape = RoundedCornerShape(12.dp), color = MaterialTheme.colorScheme.surface) {
         Column(Modifier.fillMaxWidth().padding(12.dp), verticalArrangement = Arrangement.spacedBy(3.dp)) {
             Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Text(source.label, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium)
-                Text(when (outcome?.status) {
-                    SourceStatus.SUCCESS -> "$count Treffer" + if (outcome.cached) " · Cache" else ""
-                    SourceStatus.SETUP_REQUIRED -> "Zugang nötig"
-                    SourceStatus.RATE_LIMITED -> "API-Pause"
-                    SourceStatus.ERROR -> "Nicht erreichbar"
-                    null -> if (running) "Suche läuft …" else "Abgebrochen"
+                Text(source.label, fontWeight = FontWeight.SemiBold, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                Text(when (progress?.phase) {
+                    SourcePhase.FETCHING -> "Abfrage läuft …"
+                    SourcePhase.ASSESSING -> "Inhalt wird geprüft …"
+                    null -> when (outcome?.status) {
+                        SourceStatus.SUCCESS -> "$count Treffer" + if (outcome.cached) " · Cache" else ""
+                        SourceStatus.SETUP_REQUIRED -> "Zugang nötig"
+                        SourceStatus.RATE_LIMITED -> "API-Pause"
+                        SourceStatus.ERROR -> "Fehler"
+                        null -> "Abgebrochen"
+                    }
                 }, color = color, style = MaterialTheme.typography.labelMedium)
             }
-            (outcome?.message ?: outcome?.page?.note)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
-            if (outcome?.status == SourceStatus.SETUP_REQUIRED) TextButton(onClick = connect, contentPadding = PaddingValues(0.dp)) { Text("Zugang einrichten") }
+            val detail = when {
+                progress?.phase == SourcePhase.ASSESSING -> "${progress.candidateCount} ${if (progress.candidateCount == 1) "Kandidat" else "Kandidaten"} von der Quelle geladen."
+                progress != null -> null
+                outcome?.status == SourceStatus.SUCCESS -> if (candidates == 0) "Quelle hat geantwortet: keine Kandidaten für diese Anfrage."
+                    else "$candidates ${if (candidates == 1) "Kandidat" else "Kandidaten"} geladen und geprüft."
+                else -> null
+            }
+            detail?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+            if (progress == null) {
+                (outcome?.message ?: outcome?.page?.note)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
+                if (outcome?.status == SourceStatus.SETUP_REQUIRED) TextButton(onClick = connect, contentPadding = PaddingValues(0.dp)) { Text("Zugang einrichten") }
+            }
         }
     }
 }
@@ -275,6 +307,8 @@ private fun ResultCard(hit: SearchHit, keywords: String) {
         catch (_: ActivityNotFoundException) { Toast.makeText(context, "Keine App zum Öffnen des Links gefunden.", Toast.LENGTH_SHORT).show() }
     }
     val row = hit.item
+    var expanded by remember(row.id, row.snippet) { mutableStateOf(false) }
+    var expandable by remember(row.id, row.snippet) { mutableStateOf(false) }
     val query = remember(keywords) { KeywordQuery.parse(keywords) }
     val highlight = MaterialTheme.colorScheme.primary
     Surface(onClick = { open(row.url) }, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .4f))) {
@@ -286,7 +320,14 @@ private fun ResultCard(hit: SearchHit, keywords: String) {
                 Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = "Treffer im Browser öffnen", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
             if (row.assessment?.semantic == true) Text("Inhaltlich bewertet · passende Textstelle", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            if (row.snippet.isNotBlank()) Text(highlighted(row.snippet, query, highlight), maxLines = 8, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (row.snippet.isNotBlank()) {
+                Text(highlighted(row.snippet, query, highlight), maxLines = if (expanded) Int.MAX_VALUE else 8,
+                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    onTextLayout = { if (!expanded) expandable = it.hasVisualOverflow })
+                if (expandable || expanded) TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
+                    Text(if (expanded) "Textstelle kürzen" else "Vollständige Textstelle anzeigen")
+                }
+            }
             Text(listOf(row.author, row.context).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             row.license?.let { license ->
                 Text(license, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,

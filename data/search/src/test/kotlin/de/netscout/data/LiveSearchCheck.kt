@@ -12,11 +12,13 @@ import java.util.Locale
 /** Opt-in integration check against real public endpoints; never part of normal CI tests. */
 object LiveSearchCheck {
     @JvmStatic fun main(args: Array<String>) = runBlocking {
-        val request = SearchRequest(args.firstOrNull() ?: "Codex,mobile,android", setOf(SearchSource.GITHUB, SearchSource.HACKER_NEWS))
+        val request = SearchRequest(args.firstOrNull() ?: "Codex,mobile,android", setOf(SearchSource.GITHUB, SearchSource.HACKER_NEWS, SearchSource.FORUMS))
         val providers = ProviderFactory.create(ApiSettings()).filter { it.source in request.sources }
         val root = Path.of(System.getProperty("netscout.modelDir"))
         val model = OnnxPassageScorer(FileChannel.open(root.resolve("model.onnx")).use { it.map(FileChannel.MapMode.READ_ONLY, 0, it.size()) }, root.resolve("tokenizer.bin").toFile().inputStream())
-        val outcomes = model.use { SearchEngine(providers, relevance = SemanticRelevance { it }).search(request).toList() }
+        val outcomes = model.use { SearchEngine(providers, relevance = SemanticRelevance { it }).search(request, onProgress = { progress ->
+            println("${progress.source.label}: ${progress.phase}" + if (progress.phase == SourcePhase.ASSESSING) " (${progress.candidateCount} candidates)" else "")
+        }).toList() }
         check(outcomes.all { it.status == SourceStatus.SUCCESS }) { outcomes.map { it.source to it.status } }
         val hits = ResultMerger.merge(request, outcomes.flatMap { it.page.items })
         check(hits.isNotEmpty()) { "No verified matches for the integration query" }
