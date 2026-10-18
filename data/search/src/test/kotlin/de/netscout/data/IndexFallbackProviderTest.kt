@@ -1,0 +1,42 @@
+package de.netscout.data
+
+import de.netscout.core.*
+import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.runBlocking
+import org.junit.Assert.*
+import org.junit.Test
+
+class IndexFallbackProviderTest {
+    private val request = SearchRequest("kotlin", setOf(SearchSource.REDDIT))
+    private fun provider(action: suspend (SearchCursor?) -> SourcePage) = object : SearchProvider {
+        override val source = SearchSource.REDDIT
+        override suspend fun search(request: SearchRequest, cursor: SearchCursor?) = action(cursor)
+    }
+    @Test fun `fallback cursors return to index and never reach the direct provider`() = runBlocking {
+        var directCalls = 0
+        val indexCursors = mutableListOf<SearchCursor?>()
+        val fallback = IndexFallbackProvider(
+            provider { directCalls++; throw SourceException(SourceStatus.RATE_LIMITED, "Pause") },
+            provider { cursor -> indexCursors += cursor; SourcePage(emptyList(), if (cursor == null) SearchCursor("2", 20) else null, "Indexsuche") },
+        )
+        val first = fallback.search(request, null)
+        assertTrue(first.note!!.contains("Direktzugriff fehlgeschlagen"))
+        assertEquals(SearchCursor("index:2", 20), first.nextCursor)
+        val second = fallback.search(request, first.nextCursor)
+        assertNull(second.nextCursor)
+        assertEquals(1, directCalls)
+        assertEquals(listOf(null, SearchCursor("2", 20)), indexCursors)
+    }
+    @Test fun `a failed direct continuation never switches to an unrelated index page`() = runBlocking {
+        var indexCalls = 0
+        val fallback = IndexFallbackProvider(provider { error("failure") }, provider { indexCalls++; SourcePage(emptyList()) })
+        try { fallback.search(request, SearchCursor("reddit-after", 25)); fail() }
+        catch (_: IllegalStateException) { assertEquals(0, indexCalls) }
+    }
+    @Test fun `cancellation propagates without spending a fallback request`() = runBlocking {
+        var indexCalls = 0
+        val fallback = IndexFallbackProvider(provider { throw CancellationException() }, provider { indexCalls++; SourcePage(emptyList()) })
+        try { fallback.search(request, null); fail() }
+        catch (_: CancellationException) { assertEquals(0, indexCalls) }
+    }
+}
