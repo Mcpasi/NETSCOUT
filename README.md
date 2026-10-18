@@ -53,6 +53,8 @@ Geräte-/Oberflächentests bei laufendem Emulator oder angeschlossenem Android-G
 
 GitHub Actions führt Unit-Tests, Android Lint, den signierten Debug-Build und in einem separaten Job Emulator-Tests auf API 29 aus. Der Workflow ist zusätzlich über `workflow_dispatch` manuell startbar. Test- und Lint-Berichte werden als Artefakte bereitgestellt. Tests verwenden lokale HTTP-Fixtures/Fake-Provider; sie verbrauchen keine Plattformkontingente und benötigen keine Secrets.
 
+Nach den Emulator-Tests wird außerdem die tatsächliche APK installiert und über ihre Launcher-Activity gestartet. Eine Bildschirmaufnahme dieses Startchecks liegt im Artefakt `android-ui-tests`.
+
 ## Architektur und Erweiterung
 
 ```text

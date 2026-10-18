@@ -1,14 +1,9 @@
 package de.netscout.app
 
-import android.graphics.Bitmap
 import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
-import androidx.compose.ui.graphics.asAndroidBitmap
 import androidx.test.ext.junit.runners.AndroidJUnit4
-import androidx.test.platform.app.InstrumentationRegistry
 import de.netscout.core.*
-import java.io.File
-import java.io.FileInputStream
 import org.junit.Rule
 import org.junit.Test
 import org.junit.runner.RunWith
@@ -31,12 +26,10 @@ class SearchScreenTest {
     }
     @Test fun keywordSearchShowsRealProviderResults() {
         launch()
-        screenshot("search-form.png")
         compose.onNodeWithText("Keywords").performTextInput("kotlin")
         compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
         compose.onNodeWithTag("search-content").performScrollToNode(hasText("Kotlin Testtreffer"))
         compose.onNodeWithText("Kotlin Testtreffer").assertIsDisplayed()
-        screenshot("search-results.png")
     }
     @Test fun emptySearchShowsValidation() {
         launch()
@@ -49,20 +42,5 @@ class SearchScreenTest {
         compose.onNodeWithText("Höchste Relevanz zuerst").assertIsOff()
         compose.onNodeWithText("Höchste Relevanz zuerst").performScrollTo().performClick().assertIsOn()
         compose.onNodeWithText("Neueste Beiträge zuerst").assertIsOff()
-    }
-    private fun screenshot(name: String) {
-        compose.waitForIdle()
-        val instrumentation = InstrumentationRegistry.getInstrumentation()
-        val directory = File(instrumentation.targetContext.getExternalFilesDir(null), "screenshots").apply { mkdirs() }
-        val file = File(directory, name)
-        file.outputStream().use { compose.onRoot().captureToImage().asAndroidBitmap().compress(Bitmap.CompressFormat.PNG, 100, it) }
-        // UTP uninstalls the test app at teardown. Keep CI captures in shell-owned temporary storage.
-        fun shell(command: String) {
-            instrumentation.uiAutomation.executeShellCommand(command).use { descriptor ->
-                FileInputStream(descriptor.fileDescriptor).use { it.readBytes() }
-            }
-        }
-        shell("mkdir -p /data/local/tmp/netscout-screenshots")
-        shell("cp '${file.absolutePath}' /data/local/tmp/netscout-screenshots/$name")
     }
 }
