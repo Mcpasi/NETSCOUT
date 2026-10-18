@@ -49,3 +49,5 @@ Zusätzliche Tests prüfen den parallelen Start von GitHub, HN und Foren, laufen
 ## Abschlussprüfung
 
 77 JVM-/ViewModel-Tests einschließlich echter Modellinferenz bestanden nach der Korrektur. Android Lint, Debug-APK, Android-Test-APK und Prüfung des permanenten Signaturzertifikats waren ebenfalls erfolgreich. Der letzte Live-Check am 18.10.2026 bestätigte erfolgreiche Antworten aller drei Quellen: GitHub 90 geladene/72 bestätigte Kandidaten, HN 6/3 und Foren 3/0. Diese Momentaufnahme ist kein Anspruch auf vollständige Plattformabdeckung. Oberflächenprüfungen decken die einzelnen Quellenphasen und Unicode-Eingaben zusätzlich auf dem Emulator ab.
+
+Der erste CI-Emulatorlauf scheiterte bereits vor dem App-Teststart: `FATAL | Not enough space to create userdata partition. Available: 7026.18 MB ... need 7372.80 MB.` Der anschließend wiederholte `adb: device 'emulator-5554' not found` war damit reproduziert. Der Workflow setzt die Datenpartition nun ausdrücklich auf 2 GB; das Emulator-Startzeitlimit beträgt 180 statt 600 Sekunden. Die unterstützten Eingaben wurden gegen die Metadaten von `ReactiveCircus/android-emulator-runner@v2` geprüft.

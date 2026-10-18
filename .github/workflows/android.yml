@@ -99,6 +99,9 @@ jobs:
           arch: x86_64
           target: default
           profile: pixel_2
+          # Keep the AVD below the free disk space on hosted runners.
+          disk-size: 2048M
+          emulator-boot-timeout: 180
           disable-animations: true
           script: bash scripts/run-device-tests.sh
       - name: Upload emulator test reports
