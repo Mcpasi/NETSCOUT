@@ -90,4 +90,21 @@ class SearchViewModelTest {
         assertEquals("good", model.state.value.results.single().item.id)
         assertEquals(1, model.state.value.sourceCounts[SearchSource.GITHUB])
     }
+    @Test fun `source counts and exclusion notice honor semantic rejection despite all keywords being present`() = runTest(dispatcher) {
+        // Test the view state with an explicitly rejecting evaluator, as used by the production model.
+        val semanticModel = SearchViewModel(Store()) {
+            SearchEngine(listOf(object : SearchProvider {
+                override val source = SearchSource.GITHUB
+                override suspend fun search(request: SearchRequest, cursor: SearchCursor?) = SourcePage(listOf(
+                    SearchItem("bad", source, "Codex mobile Android", "https://example.org/bad"),
+                ))
+            }), relevance = SearchRelevance { _, page -> page.copy(items = page.items.map { row ->
+                row.copy(assessment = RelevanceAssessment(false, -3.0, "", true))
+            }) })
+        }
+        semanticModel.keywords("Codex,mobile,Android"); semanticModel.search(); advanceUntilIdle()
+        assertTrue(semanticModel.state.value.results.isEmpty())
+        assertEquals(0, semanticModel.state.value.sourceCounts[SearchSource.GITHUB])
+        assertEquals(1, semanticModel.state.value.unmatchedCount)
+    }
 }

@@ -2,7 +2,7 @@ package de.netscout.core
 
 import java.util.Locale
 
-/** Literal, language-independent AND search. Commas, semicolons and spaces separate terms. */
+/** Dynamic, literal candidate queries. Relevance of retrieved text is assessed separately. */
 class KeywordQuery private constructor(val terms: List<String>, val balancedQuotes: Boolean) {
     private val patterns = terms.map(::pattern)
     val remoteQuery: String get() = terms.joinToString(" ") { "\"$it\"" }
@@ -24,27 +24,14 @@ class KeywordQuery private constructor(val terms: List<String>, val balancedQuot
 
     fun ranges(text: String): List<IntRange> = patterns.flatMap { regex -> regex.findAll(text).take(100).map { it.range }.toList() }.sortedBy { it.first }
 
-    /** Show actual matches even when they occur after the beginning of a long post. */
+    /** A single original excerpt; never stitch distant keyword mentions into apparent context. */
     fun snippet(text: String, maxLength: Int = 700): String {
         if (text.length <= maxLength) return text
         val positions = patterns.mapNotNull { it.find(text)?.range }.sortedBy { it.first }
         if (positions.isEmpty()) return text.take(maxLength)
-        val windows = mutableListOf<IntRange>()
-        for (position in positions.take(4)) {
-            val start = (position.first - 70).coerceAtLeast(0)
-            val end = (position.last + 100).coerceAtMost(text.lastIndex)
-            val previous = windows.lastOrNull()
-            if (previous != null && start <= previous.last + 1) windows[windows.lastIndex] = previous.first..maxOf(previous.last, end)
-            else windows += start..end
-        }
-        return buildString {
-            if (windows.first().first > 0) append("… ")
-            windows.forEachIndexed { index, range ->
-                if (index > 0) append(" … ")
-                append(text.substring(range))
-            }
-            if (windows.last().last < text.lastIndex) append(" …")
-        }.take(maxLength)
+        val start = (positions.first().first - 70).coerceAtLeast(0)
+        val end = (start + maxLength - 4).coerceAtMost(text.length)
+        return (if (start > 0) "… " else "") + text.substring(start, end) + (if (end < text.length) " …" else "")
     }
 
     companion object {

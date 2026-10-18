@@ -6,20 +6,22 @@ import java.util.Locale
 data class SearchHit(val item: SearchItem, val sources: Set<SearchSource>, val relevance: Double)
 
 object ResultMerger {
-    private data class Candidate(val item: SearchItem, val match: KeywordQuery.Match)
+    private data class Candidate(val item: SearchItem, val assessment: RelevanceAssessment)
     fun merge(request: SearchRequest, items: List<SearchItem>): List<SearchHit> {
-        val query = request.keywordQuery
         val hits = items.asSequence()
             .filter { it.source in request.sources && request.includes(it.publishedAt) && safeWebUrl(it.url) }
-            .mapNotNull { item -> query.match(item.title, item.searchText)?.let { Candidate(item, it) } }
+            .mapNotNull { item ->
+                val assessment = item.assessment ?: ContextRelevance.assessment(request, item)
+                if (assessment.accepted) Candidate(item.copy(snippet = assessment.evidence), assessment) else null
+            }
             .groupBy { canonicalUrl(it.item.url) }
             .map { (_, group) ->
-                val candidate = group.sortedWith(compareByDescending<Candidate> { it.match.titleCoverage }.thenBy { it.item.rank }).first()
+                val candidate = group.sortedWith(compareByDescending<Candidate> { it.assessment.score }.thenBy { it.item.rank }).first()
                 val best = candidate.item
                 // Reciprocal rank fusion avoids comparing incompatible provider scores.
                 val rrf = group.groupBy { it.item.source }.values.sumOf { rows -> 1.0 / (60 + rows.minOf { it.item.rank.coerceAtLeast(1) }) }
                 val merged = best.copy(publishedAt = best.publishedAt ?: group.mapNotNull { it.item.publishedAt }.minOrNull())
-                SearchHit(merged, group.map { it.item.source }.toSet(), 4.0 * candidate.match.titleCoverage + 0.25 * candidate.match.textCoverage + rrf)
+                SearchHit(merged, group.map { it.item.source }.toSet(), candidate.assessment.score + rrf * 0.01)
             }
         return when (request.sort) {
             SortOrder.NEWEST -> hits.sortedWith(compareByDescending<SearchHit> { it.item.publishedAt }.thenByDescending { it.relevance }.thenBy { it.item.url })

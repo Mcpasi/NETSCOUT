@@ -57,6 +57,7 @@ data class SearchItem(
     val context: String = "",
     val license: String? = null,
     val searchText: String = snippet,
+    val assessment: RelevanceAssessment? = null,
 )
 
 data class SearchCursor(val token: String, val offset: Int = 0)

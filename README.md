@@ -3,7 +3,8 @@
 Ein erster nativer Kotlin-/Jetpack-Compose-Prototyp für eine quellenübergreifende Keyword-Suche. Android 8.0+ (API 26), deutsche Oberfläche, keine Anmeldung bei NetScout und kein eigener Backend-Dienst nötig.
 
 - Keywords, optionale Von-/Bis-Daten und sechs auswählbare Quellen.
-- Wörtliche UND-Suche: `Codex,mobile,android` verlangt alle drei Begriffe in Titel oder Beitragstext. Kommas, Semikolons und Leerzeichen trennen Keywords; Anführungszeichen gruppieren genaue Phrasen.
+- Gemeinsames Suchthema statt bloßer Wortvorkommen: Kandidaten werden anhand zusammengehöriger Textstellen und eines lokalen mehrsprachigen Relevanzmodells bewertet. `Codex,mobile,android` ist eine beliebige Beispielanfrage; keine Begriffe sind im Produktionscode festgelegt.
+- Kommas, Semikolons und Leerzeichen trennen Keywords; Anführungszeichen gruppieren genaue Phrasen.
 - Neueste Beiträge oder höchste Relevanz; die Sortier-Checkboxen sind gegenseitig exklusiv.
 - Echte Treffer, Links zur Originalquelle, Quellenstatus und weitere Ergebnisse per Pagination.
 - Parallele Quellenabfragen; Fehler einzelner Plattformen beeinträchtigen die übrigen nicht.
@@ -34,18 +35,20 @@ Es gibt keinen verlässlichen, unbegrenzt kostenlosen Vollzugriff auf alle Platt
 
 Die Datumsgrenzen beziehen sich auf **Veröffentlichung/Erstellung in UTC**, einschließlich beider ausgewählter Tage. Soweit die API es unterstützt, werden Grenzen bereits an die Quelle übergeben; danach wird zentral erneut exakt gefiltert. Reddit und SearXNG werden lokal gefiltert. Treffer ohne bekanntes Datum werden bei aktivem Datumsfilter ausgeschlossen. Weitere Seiten können dann nötig sein; eine vollständige historische Suche ist nicht garantiert. „Neueste“ sortiert die **geladenen** Treffer, unbekannte Daten stehen am Ende.
 
-Jeder angezeigte Treffer muss alle Keywords als ganze Begriffe im Titel oder im gelieferten Beitragstext enthalten. Ein hoher Plattformrang reicht nicht aus. Bei langen Texten wird vor dem Kürzen geprüft; die Vorschau zeigt passende Textstellen und hebt die Begriffe hervor. Der Quellenstatus zählt bestätigte Treffer. Verworfenes bleibt bei der Pagination berücksichtigt, damit nach einer leeren gefilterten Seite weitergesucht werden kann.
+Seit 0.2.0 genügt ein Vorkommen aller Wörter irgendwo im Beitrag nicht mehr: Titel und eine zusammenhängende Textstelle müssen die Keywords gemeinsam belegen. Drei unabhängige Release-Note-Abschnitte für „Codex“, „mobile“ und „Android“ werden verworfen. Ein mehrsprachiger Cross-Encoder bewertet anschließend den inhaltlichen Bezug von Suchanfrage und Textstelle. Bei langen Texten wird vor dem Kürzen geprüft; die Vorschau zeigt die bewertete Originalstelle mit Hervorhebung. Der Quellenstatus zählt bestätigte Treffer. Verworfenes bleibt bei der Pagination berücksichtigt, damit nach einer leeren gefilterten Seite weitergesucht werden kann.
 
-Relevanz priorisiert belegte Titel-Treffer, danach Text-Treffer und die quellenübergreifende Rangposition per Reciprocal Rank Fusion (`1 / (60 + Rang)`). Inkompatible Popularitätswerte verschiedener Plattformen werden nicht vermischt. Identische URLs werden über Quellen und Seiten zusammengeführt, Trackingparameter und Fragmente ignoriert. Bedeutungsvolle Parameter wie YouTube-Video-IDs bleiben erhalten.
+Die Relevanzsortierung nutzt primär den gelernten Modellwert; Reciprocal Rank Fusion (`1 / (60 + Rang)`) dient mit kleinem Gewicht als Tie-Breaker. Inkompatible Popularitätswerte verschiedener Plattformen werden nicht vermischt. Identische URLs werden über Quellen und Seiten zusammengeführt, Trackingparameter und Fragmente ignoriert. Bedeutungsvolle Parameter wie YouTube-Video-IDs bleiben erhalten.
 
-Die Suche berücksichtigt alle Sprachen unabhängig von der deutschen App-Oberfläche. GitHub/HN erhalten keine Deutsch- oder Länder-Vorgabe; SearXNG wird explizit mit `language=all` angesprochen. Die Sprache der Keywords und die Abdeckung der Plattformen beeinflussen den Sprachmix weiterhin. Es gibt keine automatische Übersetzung, Wortstammsuche oder semantische Ähnlichkeitssuche. `AI` trifft beispielsweise nicht allein auf `Gmail` zu. HN erhält zusätzlich deaktivierte Tippfehler-/Präfixsuche und darf fehlende Wörter nicht automatisch weglassen.
+Die Suche berücksichtigt alle Sprachen unabhängig von der deutschen App-Oberfläche. GitHub/HN erhalten keine Deutsch- oder Länder-Vorgabe; SearXNG wird explizit mit `language=all` angesprochen. Die Sprache der Keywords und die Abdeckung der Plattformen beeinflussen den Sprachmix weiterhin. Das Modell wurde auf 14 Sprachen trainiert. Die Kandidatenabfragen bleiben wörtlich, ohne automatische Übersetzung oder Synonymerweiterung: Der semantische Reranker kann nur bewerten, was die Plattform liefert. `AI` trifft beispielsweise nicht allein auf `Gmail` zu. HN erhält zusätzlich deaktivierte Tippfehler-/Präfixsuche und darf fehlende Wörter nicht automatisch weglassen.
+
+Das Modell läuft vollständig auf dem Gerät, ohne kostenpflichtige KI-API, Backend oder Modell-Download in der App. Es vergrößert die APK und benötigt zusätzliche Rechenzeit. Inhaltliche Bewertungen können falsch sein; kurze mehrdeutige Anfragen bleiben mehrdeutig. Die konservative Textstellenprüfung kann passende Erklärungen über mehrere Absätze auslassen. Modell, Lizenz, feste Prüfsummen, Datenschutz und Qualitätsgrenzen: [docs/relevance-model.md](docs/relevance-model.md).
 
 ## Lokal bauen
 
-Voraussetzungen: JDK 17, Android SDK mit Plattform 35 und Build-Tools 35.0.0. In Android Studio öffnen oder `ANDROID_HOME` setzen; alternativ eine lokale `local.properties` mit `sdk.dir=/pfad/zum/sdk` erstellen. Gradle 8.11.1 samt SHA-256-Prüfung ist als Wrapper enthalten.
+Voraussetzungen: JDK 17, Python 3.11+, Android SDK mit Plattform 35 und Build-Tools 35.0.0. In Android Studio öffnen oder `ANDROID_HOME` setzen; alternativ eine lokale `local.properties` mit `sdk.dir=/pfad/zum/sdk` erstellen. Gradle 8.11.1 samt SHA-256-Prüfung ist als Wrapper enthalten. Der erste Build lädt etwa 136 MB Modell-/Tokenizerdateien aus einer festen Hugging-Face-Revision und prüft deren SHA-256; weitere Builds nutzen den lokalen Cache. Keine Python-Zusatzpakete nötig.
 
 ```sh
-./gradlew :core:search:test :data:search:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
+./gradlew :core:search:test :data:search:test :data:relevance:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
 python3 scripts/verify-debug-signature.py app/build/outputs/apk/debug/app-debug.apk
 adb install -r app/build/outputs/apk/debug/app-debug.apk
 ```
@@ -56,7 +59,7 @@ Geräte-/Oberflächentests bei laufendem Emulator oder angeschlossenem Android-G
 ./gradlew :app:connectedDebugAndroidTest
 ```
 
-GitHub Actions führt Unit-Tests, Android Lint, den signierten Debug-Build und in einem separaten Job Emulator-Tests auf API 29 aus. Der Workflow ist zusätzlich über `workflow_dispatch` manuell startbar. Test- und Lint-Berichte werden als Artefakte bereitgestellt. Tests verwenden lokale HTTP-Fixtures/Fake-Provider; sie verbrauchen keine Plattformkontingente und benötigen keine Secrets.
+GitHub Actions führt Unit-Tests einschließlich echter Modellinferenz und Tokenizer-Referenzvektoren, Android Lint, den signierten Debug-Build und in einem separaten Job Emulator-Tests auf API 29 aus. Ein Gerätetest lädt das verpackte Modell über den Produktionspfad. Der Workflow ist zusätzlich über `workflow_dispatch` manuell startbar. Test- und Lint-Berichte werden als Artefakte bereitgestellt. Plattformtests verwenden lokale HTTP-Fixtures/Fake-Provider; sie verbrauchen keine Plattformkontingente und benötigen keine Secrets.
 
 Nach den Emulator-Tests wird außerdem die tatsächliche APK installiert und über ihre Launcher-Activity gestartet. Eine Bildschirmaufnahme dieses Startchecks liegt im Artefakt `android-ui-tests`.
 
@@ -72,9 +75,10 @@ Ein optionaler Integrationstest prüft echte GitHub-/HN-Abfragen mit dem gemelde
 app/           Compose-UI, ViewModel, Android-Keystore, App-Konfiguration
 core/search/   Modelle, Validierung, Provider-Vertrag, parallele Engine, Ranking/Dedup
 data/search/   HTTP-Transport, Provider und Fallback-Verknüpfung
+data/relevance/ Lokaler ONNX-Cross-Encoder, Tokenizer, Modelltests
 ```
 
-Die beiden Suchmodule sind reine Kotlin/JVM-Module. Neue Plattformen implementieren `SearchProvider`, liefern `SourcePage` mit Treffern und optionalem `SearchCursor` und werden in `ProviderFactory` registriert. `SourceException` unterscheidet fehlende Einrichtung, Rate-Limit und Ausfälle. Neue Werte in `SearchSource` erscheinen automatisch in der Quellenauswahl. Details und nächste Ausbauschritte: [docs/architecture.md](docs/architecture.md).
+Die drei Bibliotheksmodule sind reine Kotlin/JVM-Module. Neue Plattformen implementieren `SearchProvider`, liefern `SourcePage` mit Treffern und optionalem `SearchCursor` und werden in `ProviderFactory` registriert. `SearchRelevance` trennt die Trefferbewertung von den Plattformadaptern und erlaubt spätere alternative Modelle. `SourceException` unterscheidet fehlende Einrichtung, Rate-Limit und Ausfälle. Neue Werte in `SearchSource` erscheinen automatisch in der Quellenauswahl. Details und nächste Ausbauschritte: [docs/architecture.md](docs/architecture.md).
 
 ## Datenschutz und Zugangsdaten
 

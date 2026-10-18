@@ -49,12 +49,13 @@ class KeywordQueryTest {
         assertNotNull(KeywordQuery.parse("東京,Android").match("東京ではAndroid対応です", ""))
         assertNotNull(KeywordQuery.parse("Android").match("支持Android客户端", ""))
     }
-    @Test fun `snippet retains evidence late in long texts and across distant sections`() {
+    @Test fun `snippet finds late mentions without joining unrelated distant sections`() {
         val body = "Unrelated intro. ".repeat(100) + "Codex controls a mobile client. " + "More content. ".repeat(100) + "It runs on Android."
         val query = KeywordQuery.parse("Codex,mobile,android")
         val snippet = query.snippet(body)
         assertTrue(snippet.length <= 700)
-        assertNotNull(query.match("", snippet))
+        assertNull(query.match("", snippet))
+        assertFalse(snippet.contains("Android"))
         assertTrue(query.ranges(snippet).isNotEmpty())
     }
 }

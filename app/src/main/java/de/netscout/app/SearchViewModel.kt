@@ -91,7 +91,7 @@ class SearchViewModel(
                         current.copy(
                             outcomes = current.outcomes + (outcome.source to saved),
                             sourceCounts = items.mapValues { (_, rows) -> ResultMerger.merge(request, rows).size },
-                            unmatchedCount = items.values.sumOf { rows -> rows.count { request.keywordQuery.match(it.title, it.searchText) == null } },
+                            unmatchedCount = items.values.sumOf { rows -> rows.count { !(it.assessment ?: ContextRelevance.assessment(request, it)).accepted } },
                             results = ResultMerger.merge(request, items.values.flatten()),
                         )
                     }

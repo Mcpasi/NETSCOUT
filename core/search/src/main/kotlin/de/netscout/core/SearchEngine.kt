@@ -13,6 +13,7 @@ class SearchEngine(
     private val nowMillis: () -> Long = System::currentTimeMillis,
     private val timeoutMillis: Long = 18_000,
     private val cacheTtlMillis: Long = 60_000,
+    private val relevance: SearchRelevance = ContextRelevance,
 ) {
     private val providers = providers.associateBy { it.source }
     private data class Key(val request: SearchRequest, val source: SearchSource, val cursor: SearchCursor?)
@@ -38,7 +39,9 @@ class SearchEngine(
                 }
                 val outcome = try {
                     val provider = providers[source] ?: throw SourceException(SourceStatus.SETUP_REQUIRED, "Quelle noch nicht eingerichtet.")
-                    SourceOutcome(source, SourceStatus.SUCCESS, withTimeout(timeoutMillis) { provider.search(request, cursor) })
+                    val page = withTimeout(timeoutMillis) { provider.search(request, cursor) }
+                    // Model loading/inference has its own budget and remains cancellable.
+                    SourceOutcome(source, SourceStatus.SUCCESS, withTimeout(60_000) { relevance.assess(request, page) })
                 } catch (_: TimeoutCancellationException) {
                     SourceOutcome(source, SourceStatus.ERROR, message = "Zeitlimit erreicht. Bitte erneut versuchen.")
                 } catch (cancelled: CancellationException) {

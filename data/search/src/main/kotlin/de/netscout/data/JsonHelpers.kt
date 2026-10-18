@@ -27,7 +27,13 @@ internal fun JsonObject.requireRows(key: String): List<JsonObject> {
 }
 internal fun JsonObject.array(key: String) = get(key) as? JsonArray ?: JsonArray(emptyList())
 internal fun cleanHtml(text: String) = Jsoup.parse(text).text().trim().take(700)
-internal fun fullText(text: String) = Jsoup.parse(text).text().trim()
+internal fun fullText(text: String): String {
+    val document = Jsoup.parse(text)
+    // Keep paragraph/list boundaries for relevance. Jsoup.text() flattened unrelated sections.
+    document.select("br").append("\n")
+    document.select("p,li,div,pre,h1,h2,h3,h4,blockquote").append("\n")
+    return document.wholeText().lines().joinToString("\n") { it.trim() }.trim()
+}
 internal fun parseDate(text: String): Instant? = runCatching { Instant.parse(text) }.getOrNull()
     ?: runCatching { OffsetDateTime.parse(text).toInstant() }.getOrNull()
     ?: runCatching { LocalDate.parse(text.take(10)).atStartOfDay().toInstant(ZoneOffset.UTC) }.getOrNull()

@@ -11,7 +11,7 @@ android {
         minSdk = 26
         targetSdk = 35
         versionCode = providers.gradleProperty("netscout.versionCode").orNull?.toInt() ?: 1
-        versionName = "0.1.1"
+        versionName = "0.2.0"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -31,13 +31,20 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
-    packaging { resources.excludes += "/META-INF/{AL2.0,LGPL2.1}" }
+    packaging {
+        resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
+        jniLibs.useLegacyPackaging = true
+    }
+    androidResources { noCompress += "onnx" }
+    sourceSets["main"].assets.srcDir(project(":data:relevance").layout.buildDirectory.dir("model"))
     testOptions { animationsDisabled = true }
     lint { abortOnError = true; checkDependencies = true }
 }
 dependencies {
     implementation(project(":core:search"))
     implementation(project(":data:search"))
+    implementation(project(":data:relevance"))
+    implementation(libs.onnxruntime.android)
     implementation(platform(libs.compose.bom))
     implementation(libs.compose.ui)
     implementation(libs.compose.preview)
@@ -56,3 +63,4 @@ dependencies {
     debugImplementation(libs.compose.tooling)
     debugImplementation(libs.compose.test.manifest)
 }
+tasks.named("preBuild") { dependsOn(":data:relevance:prepareModel") }

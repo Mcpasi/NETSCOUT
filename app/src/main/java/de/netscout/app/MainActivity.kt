@@ -7,6 +7,8 @@ import androidx.activity.enableEdgeToEdge
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
+import de.netscout.core.SearchEngine
+import de.netscout.data.ProviderFactory
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -16,7 +18,9 @@ class MainActivity : ComponentActivity() {
             NetScoutTheme {
                 val model: SearchViewModel = viewModel(factory = object : ViewModelProvider.Factory {
                     @Suppress("UNCHECKED_CAST")
-                    override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchViewModel(EncryptedSettingsStore(applicationContext)) as T
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T = SearchViewModel(EncryptedSettingsStore(applicationContext)) { settings ->
+                        SearchEngine(ProviderFactory.create(settings), relevance = LocalSemanticSearch.relevance(applicationContext))
+                    } as T
                 })
                 NetScoutApp(model)
             }

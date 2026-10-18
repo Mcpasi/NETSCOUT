@@ -9,15 +9,18 @@ dependencies {
     testImplementation(libs.junit)
     testImplementation(libs.coroutines.test)
     testImplementation(libs.mockwebserver)
+    testImplementation(project(":data:relevance"))
+    testRuntimeOnly(libs.onnxruntime.jvm)
 }
 
 tasks.register<JavaExec>("checkLiveSearch") {
-    dependsOn("testClasses")
+    dependsOn("testClasses", ":data:relevance:prepareModel")
     group = "verification"
     description = "Opt-in check of real public GitHub/HN search results (consumes API quota)"
     classpath = sourceSets["test"].runtimeClasspath
     mainClass.set("de.netscout.data.LiveSearchCheck")
     args(providers.gradleProperty("searchKeywords").getOrElse("Codex,mobile,android"))
+    systemProperty("netscout.modelDir", project(":data:relevance").layout.buildDirectory.dir("model/netscout-relevance").get().asFile.absolutePath)
     listOf("http.proxyHost", "http.proxyPort", "https.proxyHost", "https.proxyPort", "http.nonProxyHosts", "javax.net.ssl.trustStore").forEach { key ->
         System.getProperty(key)?.let { systemProperty(key, it) }
     }

@@ -6,4 +6,4 @@ dependencyResolutionManagement {
     repositories { google(); mavenCentral() }
 }
 rootProject.name = "NetScout"
-include(":app", ":core:search", ":data:search")
+include(":app", ":core:search", ":data:search", ":data:relevance")

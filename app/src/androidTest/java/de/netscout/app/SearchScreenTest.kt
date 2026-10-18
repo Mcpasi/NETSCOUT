@@ -24,6 +24,7 @@ class SearchScreenTest {
                         SearchItem("good", source, "Codex mobile for Android", "https://example.org/good"),
                         SearchItem("partial", source, "Codex mobile for iOS", "https://example.org/partial"),
                         SearchItem("wrong", source, "Unrelated topic", "https://example.org/wrong"),
+                        SearchItem("scattered", source, "Weekly notes", "https://example.org/scattered", searchText = "Codex support updated. Mobile browser fixed. Android permissions changed."),
                     ) else listOf(SearchItem("1", source, "Kotlin Testtreffer", "https://example.org/kotlin")))
             } })
         }
@@ -48,15 +49,16 @@ class SearchScreenTest {
         compose.onNodeWithText("Höchste Relevanz zuerst").performScrollTo().performClick().assertIsOn()
         compose.onNodeWithText("Neueste Beiträge zuerst").assertIsOff()
     }
-    @Test fun commaSeparatedKeywordsShowOnlyCompleteMatches() {
+    @Test fun commaSeparatedKeywordsRequireACommonPassage() {
         launch()
         compose.onNodeWithText("Keywords").performTextInput("Codex,mobile,android")
         compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
-        compose.onNodeWithTag("search-content").performScrollToNode(hasText("2 Ergebnisse ohne alle Keywords ausgeblendet."))
-        compose.onNodeWithText("2 Ergebnisse ohne alle Keywords ausgeblendet.").assertIsDisplayed()
+        compose.onNodeWithTag("search-content").performScrollToNode(hasText("3 Ergebnisse ohne ausreichenden Themenbezug ausgeblendet."))
+        compose.onNodeWithText("3 Ergebnisse ohne ausreichenden Themenbezug ausgeblendet.").assertIsDisplayed()
         compose.onNodeWithTag("search-content").performScrollToNode(hasText("Codex mobile for Android"))
         compose.onNodeWithText("Codex mobile for Android").assertIsDisplayed()
         compose.onNodeWithText("Codex mobile for iOS").assertDoesNotExist()
         compose.onNodeWithText("Unrelated topic").assertDoesNotExist()
+        compose.onNodeWithText("Weekly notes").assertDoesNotExist()
     }
 }

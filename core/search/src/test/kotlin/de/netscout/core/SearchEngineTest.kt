@@ -74,4 +74,31 @@ class SearchEngineTest {
         val engine = SearchEngine(listOf(provider(SearchSource.GITHUB) { delay(10_000); SourcePage(emptyList()) }), timeoutMillis = 100)
         assertEquals(SourceStatus.ERROR, engine.search(request.copy(sources = setOf(SearchSource.GITHUB))).toList().single().status)
     }
+    @Test fun `evaluated pages are cached but failed relevance never exposes unchecked results`() = runTest {
+        var evaluations = 0
+        val input = request.copy(sources = setOf(SearchSource.GITHUB))
+        val page = SourcePage(listOf(SearchItem("1", SearchSource.GITHUB, "Kotlin", "https://example.org/1")))
+        val engine = SearchEngine(listOf(provider(SearchSource.GITHUB) { page }), relevance = SearchRelevance { _, result ->
+            evaluations++
+            if (evaluations == 1) throw SourceException(SourceStatus.ERROR, "Relevance unavailable")
+            result.copy(items = result.items.map { it.copy(assessment = RelevanceAssessment(true, 7.0, "Evidence", true)) })
+        })
+        val failed = engine.search(input).toList().single()
+        assertEquals(SourceStatus.ERROR, failed.status)
+        assertTrue(failed.page.items.isEmpty())
+        assertTrue(engine.search(input).toList().single().page.items.single().assessment!!.semantic)
+        assertTrue(engine.search(input).toList().single().cached)
+        assertEquals(2, evaluations)
+    }
+    @Test fun `cancelling during relevance cancels evaluator and emits no unchecked page`() = runTest {
+        var cancelled = false
+        val engine = SearchEngine(listOf(provider(SearchSource.GITHUB) { SourcePage(emptyList()) }), relevance = SearchRelevance { _, _ ->
+            try { awaitCancellation() } finally { cancelled = true }
+        })
+        val results = mutableListOf<SourceOutcome>()
+        val job = launch { engine.search(request.copy(sources = setOf(SearchSource.GITHUB))).toList(results) }
+        runCurrent(); job.cancelAndJoin()
+        assertTrue(cancelled)
+        assertTrue(results.isEmpty())
+    }
 }

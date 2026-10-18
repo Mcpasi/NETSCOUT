@@ -97,7 +97,8 @@ fun NetScoutApp(model: SearchViewModel) {
                                 leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true,
                                 keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }),
                             )
-                            Text("Alle Keywords erforderlich · Komma oder Leerzeichen trennen · \"genaue Phrase\" · alle Sprachen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Keywords als gemeinsames Thema · Komma oder Leerzeichen trennen · \"genaue Phrase\" · alle Sprachen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Die App bewertet den inhaltlichen Bezug der gefundenen Textstellen direkt auf deinem Gerät.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                 DateField("Von", state.from, { dateField = "from" }, { model.from(null) }, Modifier.weight(1f))
                                 DateField("Bis", state.until, { dateField = "until" }, { model.until(null) }, Modifier.weight(1f))
@@ -132,7 +133,7 @@ fun NetScoutApp(model: SearchViewModel) {
                             state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
                             Button(onClick = search, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = !state.isSearching, shape = RoundedCornerShape(12.dp)) {
                                 Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(8.dp))
-                                Text(if (state.isSearching) "Quellen werden durchsucht …" else "Netz durchsuchen", fontWeight = FontWeight.Bold)
+                                Text(if (state.isSearching) "Suchen und Inhalt prüfen …" else "Netz durchsuchen", fontWeight = FontWeight.Bold)
                             }
                             if (state.isSearching) TextButton(onClick = model::cancel, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Suche abbrechen") }
                         }
@@ -164,7 +165,7 @@ fun NetScoutApp(model: SearchViewModel) {
                         Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                             Text("${state.results.size} Treffer", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
                             Text("Für „${state.activeRequest!!.keywords}“ · ${state.activeRequest!!.sort.label}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (state.unmatchedCount > 0) Text("${state.unmatchedCount} Ergebnisse ohne alle Keywords ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            if (state.unmatchedCount > 0) Text("${state.unmatchedCount} Ergebnisse ohne ausreichenden Themenbezug ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             if (state.filtersChanged) Text("Filter geändert. Starte die Suche erneut.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
                         }
                     }
@@ -284,7 +285,8 @@ private fun ResultCard(hit: SearchHit, keywords: String) {
                 Text(highlighted(row.title.ifBlank { row.url }, query, highlight), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
                 Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = "Treffer im Browser öffnen", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (row.snippet.isNotBlank()) Text(highlighted(row.snippet, query, highlight), maxLines = 6, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (row.assessment?.semantic == true) Text("Inhaltlich bewertet · passende Textstelle", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            if (row.snippet.isNotBlank()) Text(highlighted(row.snippet, query, highlight), maxLines = 8, overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             Text(listOf(row.author, row.context).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             row.license?.let { license ->
                 Text(license, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,

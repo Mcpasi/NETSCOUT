@@ -29,13 +29,17 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/netscout-models
+          key: relevance-model-${{ hashFiles('relevance-model.lock.json') }}
       - name: Install Android SDK
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
       - name: Run tests, lint and build
         env:
           BUILD_NUMBER: ${{ github.run_number }}
         run: >-
-          ./gradlew :core:search:test :data:search:test :app:testDebugUnitTest
+          ./gradlew :core:search:test :data:search:test :data:relevance:test :app:testDebugUnitTest
           :app:lintDebug :app:assembleDebug
           -Pnetscout.versionCode=$((1000 + BUILD_NUMBER)) --stacktrace
       - name: Verify permanent debug certificate
@@ -80,6 +84,10 @@ jobs:
           packages: platform-tools
           log-accepted-android-sdk-licenses: false
       - uses: gradle/actions/setup-gradle@v4
+      - uses: actions/cache@v4
+        with:
+          path: ~/.cache/netscout-models
+          key: relevance-model-${{ hashFiles('relevance-model.lock.json') }}
       - name: Enable hardware acceleration
         run: |
           echo 'KERNEL=="kvm", GROUP="kvm", MODE="0666", OPTIONS+="static_node=kvm"' | sudo tee /etc/udev/rules.d/99-kvm4all.rules
