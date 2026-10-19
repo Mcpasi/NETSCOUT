@@ -1,13 +1,8 @@
 package de.netscout.app
 
-import android.content.ActivityNotFoundException
-import android.content.Context
-import android.content.Intent
-import android.net.Uri
-import android.widget.Toast
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.Canvas
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -19,10 +14,12 @@ import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ArrowBack
 import androidx.compose.material.icons.outlined.DateRange
 import androidx.compose.material.icons.outlined.Close
 import androidx.compose.material.icons.outlined.Search
 import androidx.compose.material.icons.outlined.Settings
+import androidx.compose.material.icons.outlined.Star
 import androidx.compose.material3.*
 import androidx.compose.runtime.*
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -33,23 +30,20 @@ import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.platform.testTag
-import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.heading
 import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.text.SpanStyle
-import androidx.compose.ui.text.buildAnnotatedString
-import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.text.input.PasswordVisualTransformation
-import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.netscout.core.*
 import de.netscout.data.ApiSettings
 import de.netscout.data.publicSearchUrl
+import de.netscout.app.favorites.FavoritesScreen
+import de.netscout.app.favorites.FavoritesViewModel
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -59,13 +53,24 @@ private val DateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun NetScoutApp(model: SearchViewModel) {
+fun NetScoutApp(model: SearchViewModel, favoritesModel: FavoritesViewModel) {
     val state by model.state.collectAsStateWithLifecycle()
+    val favorites by favoritesModel.state.collectAsStateWithLifecycle()
+    val favoriteIds = remember(favorites.entries) { favorites.entries.map { it.id }.toSet() }
+    var showFavorites by rememberSaveable { mutableStateOf(false) }
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var dateField by rememberSaveable { mutableStateOf<String?>(null) }
     val focus = LocalFocusManager.current
     val context = LocalContext.current
     val listState = rememberLazyListState()
+    val snackbar = remember { SnackbarHostState() }
+    BackHandler(enabled = showFavorites) { showFavorites = false }
+    LaunchedEffect(favorites.error) {
+        favorites.error?.let {
+            snackbar.showSnackbar(it, withDismissAction = true)
+            favoritesModel.clearError()
+        }
+    }
     var searchScrollRequest by remember { mutableIntStateOf(0) }
     val query = remember(state.keywords) { KeywordQuery.parse(state.keywords) }
     LaunchedEffect(searchScrollRequest, state.activeRequest, state.settingsWarning) {
@@ -82,132 +87,150 @@ fun NetScoutApp(model: SearchViewModel) {
         Unit
     }
     Scaffold(
+        snackbarHost = { SnackbarHost(snackbar) },
         topBar = {
-            TopAppBar(title = {
+            TopAppBar(navigationIcon = {
+                if (showFavorites) IconButton(onClick = { showFavorites = false }) {
+                    Icon(Icons.AutoMirrored.Outlined.ArrowBack, contentDescription = "Zur Suche")
+                }
+            }, title = {
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
                     RadarMark()
                     Text("NETSCOUT", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold)
-                    Text("PROTOTYP", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
                 }
             }, actions = {
+                if (!showFavorites) TextButton(onClick = { showFavorites = true }) {
+                    Icon(Icons.Outlined.Star, contentDescription = null)
+                    Spacer(Modifier.width(4.dp))
+                    Text("Favoriten")
+                }
                 IconButton(onClick = { showSettings = true }) { Icon(Icons.Outlined.Settings, contentDescription = "Optionale Suchzugänge") }
             }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background))
         },
     ) { padding ->
         Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.TopCenter) {
-            LazyColumn(
-                state = listState,
-                modifier = Modifier.widthIn(max = 800.dp).fillMaxSize().imePadding().testTag("search-content"),
-                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
-                verticalArrangement = Arrangement.spacedBy(16.dp),
-            ) {
-                item {
-                    Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                        Text("Netzsuche", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
-                        Text("Ein Suchauftrag. Mehr Perspektiven.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (showFavorites) {
+                FavoritesScreen(favorites, onRetry = favoritesModel::retryLoad, onRemove = favoritesModel::remove)
+            } else {
+                LazyColumn(
+                    state = listState,
+                    modifier = Modifier.widthIn(max = 800.dp).fillMaxSize().imePadding().testTag("search-content"),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                    verticalArrangement = Arrangement.spacedBy(16.dp),
+                ) {
+                    item {
+                        Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                            Text("Netzsuche", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
+                            Text("Ein Suchauftrag. Mehr Perspektiven.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        }
                     }
-                }
-                item {
-                    Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface) {
-                        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
-                            Text("Wonach suchst du?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                            OutlinedTextField(
-                                value = state.keywords, onValueChange = model::keywords, modifier = Modifier.fillMaxWidth(),
-                                label = { Text("Keywords") }, placeholder = { Text("z. B. selbst gehostete KI") },
-                                leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true,
-                                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }),
-                            )
-                            Text("Keywords als gemeinsames Thema · Komma oder Leerzeichen trennen · \"genaue Phrase\" · alle Sprachen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (query.terms.isNotEmpty() && query.balancedQuotes) Text(
-                                "Alle Begriffe erforderlich: " + query.terms.joinToString(" · ") { if (' ' in it) "„$it“" else it },
-                                style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
-                            )
-                            Text("Die App bewertet den inhaltlichen Bezug der gefundenen Textstellen direkt auf deinem Gerät.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                                DateField("Von", state.from, { dateField = "from" }, { model.from(null) }, Modifier.weight(1f))
-                                DateField("Bis", state.until, { dateField = "until" }, { model.until(null) }, Modifier.weight(1f))
-                            }
-                            Text("Optional · Veröffentlichungsdatum · inklusive beider Tage (UTC)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            HorizontalDivider()
-                            Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                                Text("Quellen", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
-                                Text("${state.sources.size} / 6", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
-                            }
-                            SearchSource.entries.chunked(2).forEach { pair ->
-                                Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                                    pair.forEach { source -> SourceChoice(source, source in state.sources, { model.toggle(source) }, Modifier.weight(1f)) }
+                    item {
+                        Surface(shape = RoundedCornerShape(20.dp), color = MaterialTheme.colorScheme.surface) {
+                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(14.dp)) {
+                                Text("Wonach suchst du?", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                OutlinedTextField(
+                                    value = state.keywords, onValueChange = model::keywords, modifier = Modifier.fillMaxWidth(),
+                                    label = { Text("Keywords") }, placeholder = { Text("z. B. selbst gehostete KI") },
+                                    leadingIcon = { Icon(Icons.Outlined.Search, null) }, singleLine = true,
+                                    keyboardOptions = KeyboardOptions(imeAction = ImeAction.Search), keyboardActions = KeyboardActions(onSearch = { search() }),
+                                )
+                                Text("Keywords als gemeinsames Thema · Komma oder Leerzeichen trennen · \"genaue Phrase\" · alle Sprachen", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (query.terms.isNotEmpty() && query.balancedQuotes) Text(
+                                    "Alle Begriffe erforderlich: " + query.terms.joinToString(" · ") { if (' ' in it) "„$it“" else it },
+                                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
+                                )
+                                Text("Die App bewertet den inhaltlichen Bezug der gefundenen Textstellen direkt auf deinem Gerät.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
+                                    DateField("Von", state.from, { dateField = "from" }, { model.from(null) }, Modifier.weight(1f))
+                                    DateField("Bis", state.until, { dateField = "until" }, { model.until(null) }, Modifier.weight(1f))
                                 }
-                            }
-                            Text("Alle sechs Quellen funktionieren ohne Schlüssel. Reddit und YouTube nutzen den öffentlichen Suchindex.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            HorizontalDivider()
-                            Column {
-                                SortOrder.entries.forEach { order ->
-                                    Row(
-                                        Modifier.fillMaxWidth().heightIn(min = 48.dp)
-                                            .toggleable(state.sort == order, role = Role.Checkbox, onValueChange = { model.sort(order) }),
-                                        verticalAlignment = Alignment.CenterVertically,
-                                    ) {
-                                        Checkbox(state.sort == order, onCheckedChange = null)
-                                        Spacer(Modifier.width(8.dp))
-                                        Text(order.label, style = MaterialTheme.typography.bodyMedium)
+                                Text("Optional · Veröffentlichungsdatum · inklusive beider Tage (UTC)", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                HorizontalDivider()
+                                Row(Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
+                                    Text("Quellen", style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                                    Text("${state.sources.size} / 6", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelLarge)
+                                }
+                                SearchSource.entries.chunked(2).forEach { pair ->
+                                    Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                                        pair.forEach { source -> SourceChoice(source, source in state.sources, { model.toggle(source) }, Modifier.weight(1f)) }
                                     }
                                 }
-                                Text("Eine Sortierung ist aktiv.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                Text("Alle sechs Quellen funktionieren ohne Schlüssel. Reddit und YouTube nutzen den öffentlichen Suchindex.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                HorizontalDivider()
+                                Column {
+                                    SortOrder.entries.forEach { order ->
+                                        Row(
+                                            Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                                                .toggleable(state.sort == order, role = Role.Checkbox, onValueChange = { model.sort(order) }),
+                                            verticalAlignment = Alignment.CenterVertically,
+                                        ) {
+                                            Checkbox(state.sort == order, onCheckedChange = null)
+                                            Spacer(Modifier.width(8.dp))
+                                            Text(order.label, style = MaterialTheme.typography.bodyMedium)
+                                        }
+                                    }
+                                    Text("Eine Sortierung ist aktiv.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                }
+                                state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
+                                Button(onClick = search, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = !state.isSearching, shape = RoundedCornerShape(12.dp)) {
+                                    Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(8.dp))
+                                    Text(if (state.isSearching) "Suchen und Inhalt prüfen …" else "Netz durchsuchen", fontWeight = FontWeight.Bold)
+                                }
+                                if (state.isSearching) TextButton(onClick = model::cancel, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Suche abbrechen") }
                             }
-                            state.error?.let { Text(it, color = MaterialTheme.colorScheme.error, style = MaterialTheme.typography.bodyMedium) }
-                            Button(onClick = search, modifier = Modifier.fillMaxWidth().heightIn(min = 52.dp), enabled = !state.isSearching, shape = RoundedCornerShape(12.dp)) {
-                                Icon(Icons.Outlined.Search, null); Spacer(Modifier.width(8.dp))
-                                Text(if (state.isSearching) "Suchen und Inhalt prüfen …" else "Netz durchsuchen", fontWeight = FontWeight.Bold)
-                            }
-                            if (state.isSearching) TextButton(onClick = model::cancel, modifier = Modifier.align(Alignment.CenterHorizontally)) { Text("Suche abbrechen") }
                         }
                     }
-                }
-                state.settingsWarning?.let { warning -> item { Text(warning, color = MaterialTheme.colorScheme.error) } }
-                if (state.activeRequest == null) {
-                    item {
-                        Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) {
-                            Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                                Text("Dein Radar fürs Netz", fontWeight = FontWeight.SemiBold)
-                                Text("Web, Reddit, YouTube, GitHub, Foren und Hacker News kostenlos durchsuchen. Keine Einrichtung nötig.", style = MaterialTheme.typography.bodyMedium)
-                                TextButton(onClick = { showSettings = true }, contentPadding = PaddingValues(0.dp)) { Text("Eigene Zugänge verwenden (optional) →") }
-                            }
-                        }
-                    }
-                } else {
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
-                            Text("Quellenstatus", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
-                            if (state.isSearching) LinearProgressIndicator(Modifier.fillMaxWidth())
-                            state.activeRequest!!.sources.sortedBy { it.ordinal }.forEach { source ->
-                                SourceStatusRow(source, state.outcomes[source], state.sourceProgress[source], state.sourceCounts[source] ?: 0,
-                                    state.candidateCounts[source] ?: 0, { showSettings = true },
-                                    { openUrl(context, publicSearchUrl(source, state.activeRequest!!)) })
-                            }
-                            if (state.activeRequest!!.hasDateFilter) Text("Treffer ohne bekanntes Veröffentlichungsdatum werden ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        }
-                    }
-                    item {
-                        Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
-                            Text("${state.results.size} Treffer", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
-                            Text("Für „${state.activeRequest!!.keywords}“ · ${state.activeRequest!!.sort.label}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (state.unmatchedCount > 0) Text("${state.unmatchedCount} Ergebnisse ohne ausreichenden Themenbezug ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                            if (state.filtersChanged) Text("Filter geändert. Starte die Suche erneut.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
-                        }
-                    }
-                    items(state.results, key = { ResultMerger.canonicalUrl(it.item.url) }) { hit -> ResultCard(hit, state.activeRequest!!.keywords) }
-                    if (!state.isSearching && state.results.isEmpty()) {
+                    state.settingsWarning?.let { warning -> item { Text(warning, color = MaterialTheme.colorScheme.error) } }
+                    if (state.activeRequest == null) {
                         item {
-                            Text(if (state.outcomes.values.none { it.status == SourceStatus.SUCCESS }) "Noch keine Quelle hat Ergebnisse geliefert. Prüfe die Hinweise oben und versuche es erneut."
-                            else "Keine passenden Treffer in den geladenen Seiten. Probiere andere Keywords, einen größeren Zeitraum oder weitere Seiten.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) {
+                                Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
+                                    Text("Dein Radar fürs Netz", fontWeight = FontWeight.SemiBold)
+                                    Text("Web, Reddit, YouTube, GitHub, Foren und Hacker News kostenlos durchsuchen. Keine Einrichtung nötig.", style = MaterialTheme.typography.bodyMedium)
+                                    TextButton(onClick = { showSettings = true }, contentPadding = PaddingValues(0.dp)) { Text("Eigene Zugänge verwenden (optional) →") }
+                                }
+                            }
+                        }
+                    } else {
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(8.dp)) {
+                                Text("Quellenstatus", style = MaterialTheme.typography.titleMedium, modifier = Modifier.semantics { heading() })
+                                if (state.isSearching) LinearProgressIndicator(Modifier.fillMaxWidth())
+                                state.activeRequest!!.sources.sortedBy { it.ordinal }.forEach { source ->
+                                    SourceStatusRow(source, state.outcomes[source], state.sourceProgress[source], state.sourceCounts[source] ?: 0,
+                                        state.candidateCounts[source] ?: 0, { showSettings = true },
+                                        { openUrl(context, publicSearchUrl(source, state.activeRequest!!)) })
+                                }
+                                if (state.activeRequest!!.hasDateFilter) Text("Treffer ohne bekanntes Veröffentlichungsdatum werden ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        item {
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("${state.results.size} Treffer", style = MaterialTheme.typography.titleLarge, fontWeight = FontWeight.Bold, modifier = Modifier.semantics { heading() })
+                                Text("Für „${state.activeRequest!!.keywords}“ · ${state.activeRequest!!.sort.label}", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (state.unmatchedCount > 0) Text("${state.unmatchedCount} Ergebnisse ohne ausreichenden Themenbezug ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                if (state.filtersChanged) Text("Filter geändert. Starte die Suche erneut.", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.bodyMedium)
+                            }
+                        }
+                        items(state.results, key = { ResultMerger.canonicalUrl(it.item.url) }) { hit ->
+                            ResultCard(hit.item, hit.sources, state.activeRequest!!.keywords,
+                                isFavorite = ResultMerger.canonicalUrl(hit.item.url) in favoriteIds,
+                                favoriteEnabled = favorites.isLoaded,
+                                onToggleFavorite = { favoritesModel.toggle(hit, state.activeRequest!!.keywords) })
+                        }
+                        if (!state.isSearching && state.results.isEmpty()) {
+                            item {
+                                Text(if (state.outcomes.values.none { it.status == SourceStatus.SUCCESS }) "Noch keine Quelle hat Ergebnisse geliefert. Prüfe die Hinweise oben und versuche es erneut."
+                                else "Keine passenden Treffer in den geladenen Seiten. Probiere andere Keywords, einen größeren Zeitraum oder weitere Seiten.", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            }
+                        }
+                        if (state.canLoadMore) item {
+                            OutlinedButton(onClick = model::loadMore, modifier = Modifier.fillMaxWidth()) { Text("Weitere Treffer laden") }
                         }
                     }
-                    if (state.canLoadMore) item {
-                        OutlinedButton(onClick = model::loadMore, modifier = Modifier.fillMaxWidth()) { Text("Weitere Treffer laden") }
+                    item {
+                        Text("Kostenlos ohne Konto · Suchdienste können Anfragen begrenzen. Öffentliche Suchindizes erfassen nicht alle Inhalte.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
-                }
-                item {
-                    Text("Kostenlos ohne Konto · Suchdienste können Anfragen begrenzen. Öffentliche Suchindizes erfassen nicht alle Inhalte.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -306,51 +329,6 @@ private fun SourceStatusRow(source: SearchSource, outcome: SourceOutcome?, progr
             }
         }
     }
-}
-
-private fun openUrl(context: Context, url: String) {
-    try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-    catch (_: ActivityNotFoundException) { Toast.makeText(context, "Keine App zum Öffnen des Links gefunden.", Toast.LENGTH_SHORT).show() }
-}
-
-@Composable
-private fun ResultCard(hit: SearchHit, keywords: String) {
-    val context = LocalContext.current
-    fun open(url: String) = openUrl(context, url)
-    val row = hit.item
-    var expanded by remember(row.id, row.snippet) { mutableStateOf(false) }
-    var expandable by remember(row.id, row.snippet) { mutableStateOf(false) }
-    val query = remember(keywords) { KeywordQuery.parse(keywords) }
-    val highlight = MaterialTheme.colorScheme.primary
-    Surface(onClick = { open(row.url) }, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .4f))) {
-        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
-            Text(hit.sources.joinToString(" + ") { it.label } + " · " + (row.publishedAt?.atZone(ZoneOffset.UTC)?.toLocalDate()?.format(DateFormat) ?: "Datum unbekannt"),
-                style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
-            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
-                Text(highlighted(row.title.ifBlank { row.url }, query, highlight), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = "Treffer im Browser öffnen", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
-            }
-            if (row.assessment?.semantic == true) Text("Inhaltlich bewertet · passende Textstelle", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
-            if (row.snippet.isNotBlank()) {
-                Text(highlighted(row.snippet, query, highlight), maxLines = if (expanded) Int.MAX_VALUE else 8,
-                    overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    onTextLayout = { if (!expanded) expandable = it.hasVisualOverflow })
-                if (expandable || expanded) TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
-                    Text(if (expanded) "Textstelle kürzen" else "Vollständige Textstelle anzeigen")
-                }
-            }
-            Text(listOf(row.author, row.context).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
-            row.license?.let { license ->
-                Text(license, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,
-                    modifier = Modifier.clickable { open(if (license.contains("4.0")) "https://creativecommons.org/licenses/by-sa/4.0/" else "https://stackoverflow.com/help/licensing") }.padding(vertical = 8.dp))
-            }
-        }
-    }
-}
-
-private fun highlighted(text: String, query: KeywordQuery, color: Color) = buildAnnotatedString {
-    append(text)
-    query.ranges(text).forEach { addStyle(SpanStyle(color = color, fontWeight = FontWeight.Bold), it.first, it.last + 1) }
 }
 
 @Composable

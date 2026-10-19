@@ -8,6 +8,7 @@ Ein erster nativer Kotlin-/Jetpack-Compose-Prototyp für eine quellenübergreife
 - Kommas, Semikolons und Leerzeichen einschließlich kopierter Unicode-Leerzeichen trennen Keywords; Anführungszeichen gruppieren genaue Phrasen. Die Oberfläche zeigt alle erkannten, erforderlichen Begriffe.
 - Neueste Beiträge oder höchste Relevanz; die Sortier-Checkboxen sind gegenseitig exklusiv.
 - Echte Treffer, Links zur Originalquelle, Quellenstatus mit Abfrage-/Prüfphase und Kandidatenzahl sowie weitere Ergebnisse per Pagination. Nach dem Suchstart wird der Quellenstatus eingeblendet.
+- Stern an jedem Treffer zum Speichern oder Entfernen. Unter **Favoriten** bleiben bis zu 20 Ergebnisse mit Textvorschau dauerhaft auf dem Gerät verfügbar, auch nach einem App-Neustart.
 - Parallele Quellenabfragen; Fehler einzelner Plattformen beeinträchtigen die übrigen nicht.
 - Optional verschlüsselt gespeicherte Zugänge, Speicher-Cache für erfolgreiche Seiten, Abbruch und API-Pausen.
 
@@ -46,6 +47,12 @@ Die Suche berücksichtigt alle Sprachen unabhängig von der deutschen App-Oberfl
 
 Das Modell läuft vollständig auf dem Gerät, ohne kostenpflichtige KI-API, Backend oder Modell-Download in der App. Es vergrößert die APK und benötigt zusätzliche Rechenzeit. Inhaltliche Bewertungen können falsch sein; kurze mehrdeutige Anfragen bleiben mehrdeutig. Die konservative Textstellenprüfung kann passende Erklärungen über mehrere Absätze auslassen. Modell, Lizenz, feste Prüfsummen, Datenschutz und Qualitätsgrenzen: [docs/relevance-model.md](docs/relevance-model.md).
 
+### Favoriten
+
+Nach einer erfolgreichen Suche speichert ein Tipp auf den leeren Stern den Treffer. Der gefüllte Stern entfernt ihn wieder. **Favoriten** in der oberen Leiste öffnet die gespeicherten Ergebnisse auch ohne laufende Suche. Die Ansicht zeigt den belegten Platz und erlaubt das Öffnen der Originalquelle sowie das Entfernen über den Stern. Die Zurück-Taste oder der Pfeil führt zur Suche zurück.
+
+Bis zu **20 Ergebnisse** bleiben ohne Ablaufzeit lokal gespeichert: Titel, Original-Link, angezeigte Textstelle, Quellen, bekannte Veröffentlichungsdaten und Quellenangaben. Gleiche Links mit unterschiedlichen Trackingparametern zählen als ein Ergebnis. Bei vollem Speicher erscheint ein Hinweis; entferne zuerst einen Favoriten, um einen neuen zu speichern. Neue Suchanfragen, geänderte Zugänge und App-Neustarts löschen keine Favoriten. Die Vorschau ist offline lesbar; zum Öffnen der Originalquelle wird eine Verbindung benötigt. Deinstallation oder das Löschen der App-Daten entfernt auch die Favoriten.
+
 ## Lokal bauen
 
 Voraussetzungen: JDK 17, Python 3.11+, Android SDK mit Plattform 35 und Build-Tools 35.0.0. In Android Studio öffnen oder `ANDROID_HOME` setzen; alternativ eine lokale `local.properties` mit `sdk.dir=/pfad/zum/sdk` erstellen. Gradle 8.11.1 samt SHA-256-Prüfung ist als Wrapper enthalten. Der erste Build lädt etwa 136 MB Modell-/Tokenizerdateien aus einer festen Hugging-Face-Revision und prüft deren SHA-256; weitere Builds nutzen den lokalen Cache. Keine Python-Zusatzpakete nötig.
@@ -76,6 +83,8 @@ Ein optionaler Integrationstest prüft alle sechs Quellen ohne Zugangsdaten durc
 
 Reproduktion der vor der Korrektur nachgewiesenen Suchfehler: [docs/search-regressions.md](docs/search-regressions.md).
 
+Version **0.3.4** ergänzt dauerhafte lokale Favoriten mit einem Limit von 20, einer eigenen Ansicht und Löschfunktion. JVM-Tests prüfen Speicherung, Neustart, URL-Identität, gleichzeitige Änderungen, das Limit und Fehlerfälle; Android-Tests prüfen den Dateispeicher und die Bedienung der Sterne samt Favoritenansicht.
+
 Version **0.3.3** verhindert, dass Formatierungsumbrüche innerhalb von HTML-/Markdown-Absätzen passende Treffer verbergen. Im festen Prüfkorpus mit echtem Relevanzmodell steigt die Zahl korrekt bewerteter Fälle von **20/24 auf 24/24**; echte Absatz-, Listen- und Codegrenzen bleiben erhalten. Vorher-/Nachher-Berichte und Wiederholung: [docs/search-quality-0.3.3.md](docs/search-quality-0.3.3.md).
 
 Version **0.3.2** beachtet auch die mit HTTP 503 angeforderte `Retry-After`-Pause und erkennt ungültige JSON-Trefferlisten als Quellenfehler, damit der vorhandene Ausweichweg greifen kann. Reproduktionen vor der Korrektur und Regressionstests: [docs/bugfixes-0.3.2.md](docs/bugfixes-0.3.2.md).
@@ -100,7 +109,7 @@ Die drei Bibliotheksmodule sind reine Kotlin/JVM-Module. Neue Plattformen implem
 
 ## Datenschutz und Zugangsdaten
 
-Suchbegriffe gehen an die ausgewählten Plattformen oder den verwendeten Suchindex (Brave, bei Ausfall DuckDuckGo, optional eigene SearXNG-Instanz). Bei Direktzugriffsfehlern können sie an den Index-Ausweichweg gehen. Zielseiten werden zur Bewertung nicht zusätzlich abgerufen. Die App braucht Internetzugriff, aber keine Standort-, Kontakt- oder Speicherberechtigung. Sie enthält keine Telemetrie. Suchergebnisse werden nur im Arbeitsspeicher gehalten (max. 64 Seiten, 60 Sekunden Cache); es gibt keine Suchhistorie. Formulare und aktuelle Treffer überleben eine Bildschirmdrehung, aber keinen Prozessneustart.
+Suchbegriffe gehen an die ausgewählten Plattformen oder den verwendeten Suchindex (Brave, bei Ausfall DuckDuckGo, optional eigene SearXNG-Instanz). Bei Direktzugriffsfehlern können sie an den Index-Ausweichweg gehen. Zielseiten werden zur Bewertung nicht zusätzlich abgerufen. Die App braucht Internetzugriff, aber keine Standort-, Kontakt- oder Speicherberechtigung. Sie enthält keine Telemetrie. Suchergebnisse bleiben im Arbeitsspeicher (max. 64 Seiten, 60 Sekunden Cache), außer du speicherst sie ausdrücklich als Favoriten. Es gibt keine Suchhistorie. Formulare und aktuelle Treffer überleben eine Bildschirmdrehung, aber keinen Prozessneustart. Bis zu 20 Favoriten samt ursprünglichen Keywords für die Hervorhebung werden ohne Ablaufzeit im privaten App-Dateispeicher aufbewahrt. Es erfolgt keine Synchronisierung oder Sicherung in der Cloud. Entfernen über den Stern löscht den gespeicherten Eintrag dauerhaft.
 
 Zugänge werden mit AES-GCM und einem nicht exportierbaren Android-Keystore-Schlüssel lokal verschlüsselt. App-Backups sind deaktiviert. Die Zugänge werden nicht im Saved-Instance-State oder in Logs gespeichert und nur an die jeweilige API gesendet. Deinstallation entfernt die lokalen Zugänge. Leere Zugangsfelder speichern entfernt die entsprechenden Tokens. Für größere Verteilung sind ein eigener Backend-Dienst und geregelte OAuth-/Schlüsselverwaltung vorgesehen.
 

@@ -9,6 +9,9 @@ import androidx.lifecycle.ViewModelProvider
 import androidx.lifecycle.viewmodel.compose.viewModel
 import de.netscout.core.SearchEngine
 import de.netscout.data.ProviderFactory
+import de.netscout.app.favorites.FavoritesRepository
+import de.netscout.app.favorites.FavoritesViewModel
+import de.netscout.app.favorites.FileFavoritesStore
 
 class MainActivity : ComponentActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -22,7 +25,12 @@ class MainActivity : ComponentActivity() {
                         SearchEngine(ProviderFactory.create(settings), relevance = LocalSemanticSearch.relevance(applicationContext))
                     } as T
                 })
-                NetScoutApp(model)
+                val favorites: FavoritesViewModel = viewModel(factory = object : ViewModelProvider.Factory {
+                    @Suppress("UNCHECKED_CAST")
+                    override fun <T : ViewModel> create(modelClass: Class<T>): T =
+                        FavoritesViewModel(FavoritesRepository(FileFavoritesStore(applicationContext))) as T
+                })
+                NetScoutApp(model, favorites)
             }
         }
     }

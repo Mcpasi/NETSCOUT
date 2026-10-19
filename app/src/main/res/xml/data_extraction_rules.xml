@@ -2,8 +2,14 @@
 <data-extraction-rules>
     <cloud-backup>
         <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="favorites.json" />
+        <exclude domain="file" path="favorites.json.bak" />
+        <exclude domain="file" path="favorites.json.new" />
     </cloud-backup>
     <device-transfer>
         <exclude domain="sharedpref" path="." />
+        <exclude domain="file" path="favorites.json" />
+        <exclude domain="file" path="favorites.json.bak" />
+        <exclude domain="file" path="favorites.json.new" />
     </device-transfer>
 </data-extraction-rules>

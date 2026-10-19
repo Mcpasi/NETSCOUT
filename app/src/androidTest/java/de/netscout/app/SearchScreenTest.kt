@@ -4,6 +4,7 @@ import androidx.compose.ui.test.*
 import androidx.compose.ui.test.junit4.createComposeRule
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import de.netscout.core.*
+import de.netscout.app.favorites.*
 import kotlinx.coroutines.CompletableDeferred
 import org.junit.Rule
 import org.junit.Test
@@ -36,7 +37,11 @@ class SearchScreenTest {
                 ContextRelevance.assess(request, page)
             })
         }
-        compose.setContent { NetScoutTheme { NetScoutApp(model) } }
+        val favorites = FavoritesViewModel(FavoritesRepository(object : FavoritesStore {
+            override suspend fun load() = emptyList<Favorite>()
+            override suspend fun save(favorites: List<Favorite>) = Unit
+        }))
+        compose.setContent { NetScoutTheme { NetScoutApp(model, favorites) } }
     }
 
     @Test fun blockedPublicSearchOffersTheSameKeywordsInTheBrowserWithoutRequestingAKey() {
