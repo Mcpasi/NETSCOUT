@@ -127,6 +127,37 @@ class ProvidersTest {
         try { HackerNewsProvider(http, server.url("/")).search(request, null); fail() }
         catch (failure: SourceException) { assertEquals(SourceStatus.ERROR, failure.status) }
     }
+    @Test fun `non-object search rows trigger the index fallback instead of a false empty success`() = runBlocking {
+        respond("""{"hits":[null,"schema-changed",42,[]],"nbPages":1}""")
+        var indexCalls = 0
+        val indexed = SearchItem("fallback", SearchSource.HACKER_NEWS, "Kotlin Android", "https://news.ycombinator.com/item?id=123")
+        val provider = IndexFallbackProvider(HackerNewsProvider(http, server.url("/")), object : SearchProvider {
+            override val source = SearchSource.HACKER_NEWS
+            override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
+                indexCalls++
+                return SourcePage(listOf(indexed))
+            }
+        })
+        val page = provider.search(request, null)
+        assertEquals("An unreadable hits array must not suppress the fallback", 1, indexCalls)
+        assertEquals(listOf(indexed), page.items)
+    }
+    @Test fun `unreadable final index response reports an error`() = runBlocking {
+        respond("""{"results":[null,"schema-changed",42,[]]}""")
+        try { SearxngProvider(SearchSource.WEB, http, server.url("/").toString()).search(request, null); fail("Unreadable results must not be reported as success") }
+        catch (failure: SourceException) { assertEquals(SourceStatus.ERROR, failure.status) }
+    }
+    @Test fun `a valid empty JSON result list remains successful without fallback`() = runBlocking {
+        respond("""{"hits":[],"nbPages":0}""")
+        val provider = IndexFallbackProvider(HackerNewsProvider(http, server.url("/")), object : SearchProvider {
+            override val source = SearchSource.HACKER_NEWS
+            override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage = error("A valid empty page must not use the index")
+        })
+        val page = provider.search(request, null)
+        assertTrue(page.items.isEmpty())
+        assertNull(page.nextCursor)
+        assertEquals(1, server.requestCount)
+    }
     @Test fun `user comma query is sent as three required words and finds body evidence after 700 characters`() = runBlocking {
         val text = "Intro. ".repeat(200) + "Codex mobile client for Android"
         respond("""{"hits":[{"objectID":"123","title":"Release notes","story_text":"$text","created_at_i":1767225600}],"nbPages":1}""")

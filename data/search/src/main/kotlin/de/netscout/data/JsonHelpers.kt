@@ -24,8 +24,10 @@ internal fun JsonObject.flag(key: String) = (get(key) as? JsonPrimitive)?.boolea
 internal fun JsonObject.obj(key: String) = get(key) as? JsonObject ?: JsonObject(emptyMap())
 internal fun JsonObject.rows(key: String) = (get(key) as? JsonArray)?.mapNotNull { it as? JsonObject }.orEmpty()
 internal fun JsonObject.requireRows(key: String): List<JsonObject> {
-    if (get(key) !is JsonArray) throw SourceException(SourceStatus.ERROR, "Quelle liefert keine gültige Trefferliste.")
-    return rows(key)
+    val rows = get(key) as? JsonArray
+    // Dropping malformed elements would turn a broken response into a successful empty page.
+    if (rows == null || rows.any { it !is JsonObject }) throw SourceException(SourceStatus.ERROR, "Quelle liefert keine gültige Trefferliste.")
+    return rows.map { it as JsonObject }
 }
 internal fun JsonObject.array(key: String) = get(key) as? JsonArray ?: JsonArray(emptyList())
 internal fun cleanHtml(text: String) = Jsoup.parse(text).text().trim().take(700)

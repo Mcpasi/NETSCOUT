@@ -76,15 +76,18 @@ class JsonHttpClient(
             override fun onResponse(call: Call, response: Response) {
                 val result = runCatching {
                     response.use {
-                        val limited = it.code == 429 || (it.code == 403 && it.header("X-RateLimit-Remaining") == "0")
+                        val retryAfter = it.header("Retry-After")
+                        // A 503 may request a maintenance/overload pause, just like a rate limit.
+                        val limited = it.code == 429 || (it.code == 403 && it.header("X-RateLimit-Remaining") == "0") ||
+                            (it.code == 503 && retryAfter != null)
                         if (limited) {
-                            val retry = it.header("Retry-After")?.let { value ->
+                            val retry = retryAfter?.let { value ->
                                 value.toLongOrNull() ?: runCatching {
                                     ZonedDateTime.parse(value, DateTimeFormatter.RFC_1123_DATE_TIME).toEpochSecond() - now().epochSecond
                                 }.getOrNull()
                             } ?: it.header("X-RateLimit-Reset")?.toLongOrNull()?.minus(now().epochSecond) ?: 60
                             postpone(request.url.host, retry)
-                            throw SourceException(SourceStatus.RATE_LIMITED, "Anfragelimit erreicht. Bitte später erneut versuchen.")
+                            throw SourceException(SourceStatus.RATE_LIMITED, "Quelle verlangt eine Pause. Bitte später erneut versuchen.")
                         }
                         if (it.code >= 500) throw IOException("Temporary server failure")
                         if (it.code == 401 || it.code == 403) throw SourceException(SourceStatus.SETUP_REQUIRED, "Zugang abgelehnt oder Kontingent verbraucht. Einstellungen prüfen.")
