@@ -1,0 +1,22 @@
+[
+  {"id":"github-inline-generic","provider":"github_issue","keywords":"Widget,kotlin","title":"Kotlin collection example","body":"Use `List<Widget>` in Kotlin to store typed values.","relevant":true},
+  {"id":"github-fenced-generic","provider":"github_issue","keywords":"Widget,kotlin","title":"Kotlin collection example","body":"Create a typed collection:\n\n```kotlin\nval items = ArrayList<Widget>()\n```","relevant":true},
+  {"id":"github-inline-future","provider":"github_issue","keywords":"Connection,java","title":"Java asynchronous database client","body":"Use `CompletableFuture<Connection>` in Java to connect to the database asynchronously.","relevant":true},
+  {"id":"github-description-product","provider":"github_repository","keywords":"Codex,mobile,Android","title":"remote-client","body":"A native Android mobile client for <Codex>, the coding agent.","relevant":true},
+  {"id":"github-description-generic","provider":"github_repository","keywords":"Widget,kotlin","title":"typed-collections","body":"A Kotlin library for <Widget> collections.","relevant":true},
+  {"id":"reddit-inline-generic","provider":"reddit","keywords":"Widget,kotlin","title":"Kotlin collection example","body":"Use `List<Widget>` in Kotlin to store typed values.","relevant":true},
+  {"id":"reddit-fenced-generic","provider":"reddit","keywords":"Connection,rust","title":"Rust database client","body":"Create a database connection:\n\n```rust\nlet connection = Client<Connection>::new();\n```","relevant":true},
+  {"id":"github-plain-issue","provider":"github_issue","keywords":"Widget,kotlin","title":"Kotlin collection example","body":"A Kotlin library for Widget collections.","relevant":true},
+  {"id":"github-plain-description","provider":"github_repository","keywords":"Widget,kotlin","title":"typed-collections","body":"A Kotlin library for Widget collections.","relevant":true},
+  {"id":"reddit-plain-client","provider":"reddit","keywords":"Codex,mobile,Android","title":"Remote coding agent client","body":"A native Android mobile client for Codex.","relevant":true},
+  {"id":"hn-html-client","provider":"hacker_news","keywords":"Codex,mobile,Android","title":"Remote coding agent client","body":"A native <b>Codex</b> mobile client for Android.","relevant":true},
+  {"id":"hn-escaped-generic","provider":"hacker_news","keywords":"Widget,kotlin","title":"Kotlin collection example","body":"Use <code>List&lt;Widget&gt;</code> in Kotlin to store typed values.","relevant":true},
+  {"id":"youtube-plain-tutorial","provider":"youtube","keywords":"Widget,kotlin","title":"Kotlin collection tutorial","body":"A tutorial about Kotlin collections and Widget values.","relevant":true},
+  {"id":"github-markdown-html","provider":"github_issue","keywords":"Codex,mobile,Android","title":"Remote coding agent client","body":"<p>A native <b>Codex</b> mobile client for Android.</p>","relevant":true},
+  {"id":"negative-missing-widget","provider":"github_issue","keywords":"Widget,kotlin","title":"Kotlin collections","body":"A Kotlin library for ordinary strings.","relevant":false},
+  {"id":"negative-missing-mobile","provider":"github_repository","keywords":"Codex,mobile,Android","title":"desktop-client","body":"A Codex desktop client; Android support is not described.","relevant":false},
+  {"id":"negative-unrelated","provider":"reddit","keywords":"Widget,kotlin","title":"Gardening advice","body":"How to grow tomatoes on a balcony.","relevant":false},
+  {"id":"negative-disconnected-html","provider":"hacker_news","keywords":"Codex,mobile,Android","title":"General release notes","body":"<p>Codex support for web.</p><p>Mobile Safari layout fixes.</p><p>Android notification permissions updated.</p>","relevant":false},
+  {"id":"negative-substring","provider":"hacker_news","keywords":"AI","title":"Gmail and email","body":"A chair in the railway domain.","relevant":false},
+  {"id":"negative-wrong-platform","provider":"github_issue","keywords":"kotlin,Android","title":"Kotlin on iOS","body":"An iPhone application written in Kotlin.","relevant":false}
+]

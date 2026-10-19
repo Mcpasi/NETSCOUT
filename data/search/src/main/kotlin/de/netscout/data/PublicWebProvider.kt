@@ -74,12 +74,14 @@ internal class HtmlSearchProvider(
             throw SourceException(SourceStatus.RATE_LIMITED, "Suchdienst verlangt eine Browserprüfung. Bitte später erneut suchen oder einen eigenen Suchdienst verwenden.")
         }
         if (rows.isEmpty() && !emptyResults(document)) throw SourceException(SourceStatus.ERROR, "Suchdienst liefert keine lesbare Trefferliste. Bitte später erneut versuchen.")
+        var readableRows = 0
         val items = rows.mapIndexedNotNull { index, row ->
             val titleNode = row.selectFirst(if (backend == PublicSearchBackend.BRAVE) ".title" else ".result__a") ?: return@mapIndexedNotNull null
             val anchor = if (backend == PublicSearchBackend.BRAVE) titleNode.closest("a[href]") else titleNode
             val link = resultUrl(anchor?.attr("href").orEmpty()) ?: return@mapIndexedNotNull null
-            if (!acceptsIndexUrl(source, link)) return@mapIndexedNotNull null
             val title = titleNode.text().trim().take(700).takeIf(String::isNotBlank) ?: return@mapIndexedNotNull null
+            readableRows++
+            if (!acceptsIndexUrl(source, link)) return@mapIndexedNotNull null
             // Answers, related links, site labels and navigation are not evidence for this result.
             val content = row.selectFirst(if (backend == PublicSearchBackend.BRAVE)
                 ".generic-snippet .content, .video-snippet .content, .inline-qa-question" else ".result__snippet")
@@ -88,6 +90,8 @@ internal class HtmlSearchProvider(
                 publishedAt = publishedDate(row), rank = (cursor?.offset ?: 0) + index + 1,
                 context = "${backend.label} · öffentlicher Suchindex · ${link.host}", searchText = body)
         }.distinctBy { it.url }
+        if (rows.isNotEmpty() && readableRows == 0) throw SourceException(SourceStatus.ERROR,
+            "Suchdienst liefert keine lesbare Trefferliste. Bitte später erneut versuchen.")
         val next = if (rows.isEmpty()) null else nextCursor(document, query, parameters, (cursor?.offset ?: 0) + rows.size)
         return SourcePage(items, next, "Ohne Schlüssel über ${backend.label}. " +
             (if (source == SearchSource.WEB) "Bewertet werden Titel und Index-Textstellen. " else "Öffentlich indexierte ${source.label}-Seiten; kein vollständiger Direktzugriff. ") +

@@ -10,6 +10,8 @@ import kotlinx.serialization.json.contentOrNull
 import kotlinx.serialization.json.doubleOrNull
 import kotlinx.serialization.json.intOrNull
 import org.jsoup.Jsoup
+import org.commonmark.parser.Parser
+import org.commonmark.renderer.html.HtmlRenderer
 import java.time.Instant
 import java.time.LocalDate
 import java.time.OffsetDateTime
@@ -27,6 +29,10 @@ internal fun JsonObject.requireRows(key: String): List<JsonObject> {
 }
 internal fun JsonObject.array(key: String) = get(key) as? JsonArray ?: JsonArray(emptyList())
 internal fun cleanHtml(text: String) = Jsoup.parse(text).text().trim().take(700)
+// Parse code spans/fences before HTML extraction so literal <Type> is preserved as text.
+private val markdownParser = Parser.builder().build()
+private val markdownRenderer = HtmlRenderer.builder().build()
+internal fun markdownText(text: String) = fullText(markdownRenderer.render(markdownParser.parse(text)))
 internal fun fullText(text: String): String {
     val document = Jsoup.parse(text)
     // Keep paragraph/list boundaries for relevance. Jsoup.text() flattened unrelated sections.

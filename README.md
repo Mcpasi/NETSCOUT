@@ -76,6 +76,13 @@ Ein optionaler Integrationstest prüft alle sechs Quellen ohne Zugangsdaten durc
 
 Reproduktion der vor der Korrektur nachgewiesenen Suchfehler: [docs/search-regressions.md](docs/search-regressions.md).
 
+Die [Qualitätsmessung für 0.3.1](docs/search-quality-0.3.1.md) dokumentiert vier weitere reproduzierte Fehlerursachen, die Korrekturen und maschinenlesbare Vorher-/Nachher-Ergebnisse. Der feste Prüfkorpus umfasst Textaufbereitung mit echtem lokalem Relevanzmodell, URL-Deduplizierung und Ausweichwege bei unlesbaren Suchantworten. Er lässt sich ohne Abfragen öffentlicher Suchdienste wiederholen:
+
+```sh
+./gradlew :data:search:checkSearchQuality
+# Bericht: data/search/build/reports/search-quality.json
+```
+
 ## Architektur und Erweiterung
 
 ```text

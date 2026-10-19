@@ -36,12 +36,14 @@ object ResultMerger {
 
     fun canonicalUrl(url: String): String = runCatching {
         val uri = URI(url)
+        // Independent keys may be reordered, but repeated keys can have positional semantics.
         val query = uri.rawQuery?.split('&')?.filterNot {
             val name = it.substringBefore('=').lowercase(Locale.ROOT)
             name.startsWith("utm_") || name in setOf("fbclid", "gclid")
-        }?.sorted()?.joinToString("&")?.takeIf { it.isNotEmpty() }
+        }?.sortedBy { it.substringBefore('=') }?.joinToString("&")?.takeIf { it.isNotEmpty() }
         val host = uri.host.lowercase(Locale.ROOT).removePrefix("www.")
-        val port = uri.port.takeUnless { it == -1 || it == 80 || it == 443 }?.let { ":$it" }.orEmpty()
+        val defaultPort = when (uri.scheme?.lowercase(Locale.ROOT)) { "http" -> 80; "https" -> 443; else -> -1 }
+        val port = uri.port.takeUnless { it == -1 || it == defaultPort }?.let { ":$it" }.orEmpty()
         "$host$port${uri.rawPath.orEmpty().trimEnd('/')}" + (query?.let { "?$it" } ?: "")
     }.getOrDefault(url)
 }

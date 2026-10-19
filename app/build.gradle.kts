@@ -10,8 +10,8 @@ android {
         applicationId = "de.netscout.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = providers.gradleProperty("netscout.versionCode").orNull?.toInt() ?: 1
-        versionName = "0.3.0"
+        versionCode = providers.gradleProperty("netscout.versionCode").orNull?.toInt() ?: 2
+        versionName = "0.3.1"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -60,6 +60,7 @@ dependencies {
     androidTestImplementation(libs.compose.test)
     androidTestImplementation(libs.androidx.test.runner)
     androidTestImplementation(libs.androidx.test.junit)
+    androidTestImplementation(libs.okhttp)
     debugImplementation(libs.compose.tooling)
     debugImplementation(libs.compose.test.manifest)
 }

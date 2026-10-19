@@ -1,0 +1,474 @@
+{
+    "schemaVersion": 1,
+    "label": "5ce6327",
+    "scope": "Fixed diagnostic fixtures; real providers, real ONNX relevance model, no live search calls",
+    "text": {
+        "cases": 20,
+        "truePositive": 8,
+        "falsePositive": 0,
+        "falseNegative": 6,
+        "trueNegative": 6,
+        "accuracy": 0.7,
+        "precision": 1.0,
+        "recall": 0.5714285714285714,
+        "f1": 0.7272727272727273,
+        "details": [
+            {
+                "id": "github-inline-generic",
+                "expected": true,
+                "accepted": false,
+                "correct": false
+            },
+            {
+                "id": "github-fenced-generic",
+                "expected": true,
+                "accepted": false,
+                "correct": false
+            },
+            {
+                "id": "github-inline-future",
+                "expected": true,
+                "accepted": false,
+                "correct": false
+            },
+            {
+                "id": "github-description-product",
+                "expected": true,
+                "accepted": false,
+                "correct": false
+            },
+            {
+                "id": "github-description-generic",
+                "expected": true,
+                "accepted": false,
+                "correct": false
+            },
+            {
+                "id": "reddit-inline-generic",
+                "expected": true,
+                "accepted": false,
+                "correct": false
+            },
+            {
+                "id": "reddit-fenced-generic",
+                "expected": true,
+                "accepted": true,
+                "correct": true,
+                "score": 4.40195894241333
+            },
+            {
+                "id": "github-plain-issue",
+                "expected": true,
+                "accepted": true,
+                "correct": true,
+                "score": 3.9108033180236816
+            },
+            {
+                "id": "github-plain-description",
+                "expected": true,
+                "accepted": true,
+                "correct": true,
+                "score": 4.059876918792725
+            },
+            {
+                "id": "reddit-plain-client",
+                "expected": true,
+                "accepted": true,
+                "correct": true,
+                "score": 7.0505595207214355
+            },
+            {
+                "id": "hn-html-client",
+                "expected": true,
+                "accepted": true,
+                "correct": true,
+                "score": 8.346012115478516
+            },
+            {
+                "id": "hn-escaped-generic",
+                "expected": true,
+                "accepted": true,
+                "correct": true,
+                "score": 5.029839038848877
+            },
+            {
+                "id": "youtube-plain-tutorial",
+                "expected": true,
+                "accepted": true,
+                "correct": true,
+                "score": 2.093269109725952
+            },
+            {
+                "id": "github-markdown-html",
+                "expected": true,
+                "accepted": true,
+                "correct": true,
+                "score": 8.346012115478516
+            },
+            {
+                "id": "negative-missing-widget",
+                "expected": false,
+                "accepted": false,
+                "correct": true
+            },
+            {
+                "id": "negative-missing-mobile",
+                "expected": false,
+                "accepted": false,
+                "correct": true
+            },
+            {
+                "id": "negative-unrelated",
+                "expected": false,
+                "accepted": false,
+                "correct": true
+            },
+            {
+                "id": "negative-disconnected-html",
+                "expected": false,
+                "accepted": false,
+                "correct": true
+            },
+            {
+                "id": "negative-substring",
+                "expected": false,
+                "accepted": false,
+                "correct": true
+            },
+            {
+                "id": "negative-wrong-platform",
+                "expected": false,
+                "accepted": false,
+                "correct": true
+            }
+        ]
+    },
+    "urlIdentity": {
+        "cases": 8,
+        "correct": 4,
+        "accuracy": 0.5,
+        "expectedUniqueResults": 12,
+        "actualUniqueResults": 8,
+        "details": [
+            {
+                "id": "tracking",
+                "expectedUniqueResults": 1,
+                "actualUniqueResults": 1,
+                "correct": true
+            },
+            {
+                "id": "fragment",
+                "expectedUniqueResults": 1,
+                "actualUniqueResults": 1,
+                "correct": true
+            },
+            {
+                "id": "parameter-order",
+                "expectedUniqueResults": 1,
+                "actualUniqueResults": 1,
+                "correct": true
+            },
+            {
+                "id": "default-port",
+                "expectedUniqueResults": 1,
+                "actualUniqueResults": 1,
+                "correct": true
+            },
+            {
+                "id": "repeated-sort",
+                "expectedUniqueResults": 2,
+                "actualUniqueResults": 1,
+                "correct": false
+            },
+            {
+                "id": "repeated-filter",
+                "expectedUniqueResults": 2,
+                "actualUniqueResults": 1,
+                "correct": false
+            },
+            {
+                "id": "http-nondefault-port",
+                "expectedUniqueResults": 2,
+                "actualUniqueResults": 1,
+                "correct": false
+            },
+            {
+                "id": "https-nondefault-port",
+                "expectedUniqueResults": 2,
+                "actualUniqueResults": 1,
+                "correct": false
+            }
+        ]
+    },
+    "reliability": {
+        "attempts": 24,
+        "correct": 15,
+        "contractSuccessRate": 0.625,
+        "details": [
+            {
+                "id": "normal",
+                "round": 1,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "explicit-empty",
+                "round": 1,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "challenge-fallback",
+                "round": 1,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            },
+            {
+                "id": "http-fallback",
+                "round": 1,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            },
+            {
+                "id": "missing-title-fallback",
+                "round": 1,
+                "correct": false,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "missing-link-fallback",
+                "round": 1,
+                "correct": false,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "scope-exclusion",
+                "round": 1,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "unreadable-final-service",
+                "round": 1,
+                "correct": false,
+                "expectedStatus": "ERROR",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            },
+            {
+                "id": "normal",
+                "round": 2,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "explicit-empty",
+                "round": 2,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "challenge-fallback",
+                "round": 2,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            },
+            {
+                "id": "http-fallback",
+                "round": 2,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            },
+            {
+                "id": "missing-title-fallback",
+                "round": 2,
+                "correct": false,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "missing-link-fallback",
+                "round": 2,
+                "correct": false,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "scope-exclusion",
+                "round": 2,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "unreadable-final-service",
+                "round": 2,
+                "correct": false,
+                "expectedStatus": "ERROR",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            },
+            {
+                "id": "normal",
+                "round": 3,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "explicit-empty",
+                "round": 3,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "challenge-fallback",
+                "round": 3,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            },
+            {
+                "id": "http-fallback",
+                "round": 3,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 1,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            },
+            {
+                "id": "missing-title-fallback",
+                "round": 3,
+                "correct": false,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "missing-link-fallback",
+                "round": 3,
+                "correct": false,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 1,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "scope-exclusion",
+                "round": 3,
+                "correct": true,
+                "expectedStatus": "SUCCESS",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 0,
+                "actualFallbackCalls": 0
+            },
+            {
+                "id": "unreadable-final-service",
+                "round": 3,
+                "correct": false,
+                "expectedStatus": "ERROR",
+                "actualStatus": "SUCCESS",
+                "expectedItems": 0,
+                "actualItems": 0,
+                "expectedFallbackCalls": 1,
+                "actualFallbackCalls": 1
+            }
+        ]
+    }
+}

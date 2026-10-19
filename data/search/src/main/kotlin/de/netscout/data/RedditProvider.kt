@@ -22,7 +22,7 @@ class RedditProvider(
         val items = rows.mapIndexedNotNull { index, wrapper ->
             val row = wrapper.obj("data")
             val path = row.text("permalink").takeIf { it.startsWith("/r/") } ?: return@mapIndexedNotNull null
-            val body = fullText(row.text("selftext"))
+            val body = markdownText(row.text("selftext"))
             SearchItem(row.text("name"), source, row.text("title"), "https://www.reddit.com$path", query.snippet(body),
                 row.text("author"), epoch(row.decimal("created_utc")), (cursor?.offset ?: 0) + index + 1, row.text("subreddit_name_prefixed"), searchText = body)
         }

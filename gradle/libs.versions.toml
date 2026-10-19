@@ -16,6 +16,7 @@ serialization-json = { module = "org.jetbrains.kotlinx:kotlinx-serialization-jso
 okhttp = { module = "com.squareup.okhttp3:okhttp", version.ref = "okhttp" }
 mockwebserver = { module = "com.squareup.okhttp3:mockwebserver", version.ref = "okhttp" }
 jsoup = { module = "org.jsoup:jsoup", version = "1.18.3" }
+commonmark = { module = "org.commonmark:commonmark", version = "0.21.0" }
 onnxruntime-jvm = { module = "com.microsoft.onnxruntime:onnxruntime", version.ref = "onnxruntime" }
 onnxruntime-android = { module = "com.microsoft.onnxruntime:onnxruntime-android", version.ref = "onnxruntime" }
 junit = { module = "junit:junit", version = "4.13.2" }

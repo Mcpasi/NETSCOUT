@@ -45,7 +45,8 @@ class GitHubProvider(
         val items = responses.flatMapIndexed { kindIndex, response ->
             response.getOrNull()?.rows("items").orEmpty().mapIndexed { index, row ->
                 val repository = kindIndex == 0
-                val body = fullText(row.text(if (repository) "description" else "body"))
+                // Repository descriptions are plain text; issue/PR bodies are Markdown.
+                val body = if (repository) row.text("description") else markdownText(row.text("body"))
                 SearchItem(row.text("id"), source, row.text(if (repository) "full_name" else "title"), row.text("html_url"), query.snippet(body),
                     row.obj(if (repository) "owner" else "user").text("login"), parseDate(row.text("created_at")), (cursor?.offset ?: 0) + index * kinds.size + kindIndex + 1,
                     when (kindIndex) { 0 -> "Repository"; 1 -> "Issue"; else -> "Pull Request" }, searchText = body)

@@ -1,5 +1,7 @@
 # Reproduzierte Suchfehler
 
+Die zusätzliche Untersuchung für **0.3.1** mit vier Fehlerursachen, 13 vor der Korrektur fehlgeschlagenen Regressionstests und festen Vorher-/Nachher-Messungen steht in [search-quality-0.3.1.md](search-quality-0.3.1.md). Die folgenden Abschnitte beschreiben die frühere Untersuchung vom 18.10.2026.
+
 Ausgangspunkt: `7685087a900d3ba53ff46b94b07ac07272d16797` (18.10.2026).
 Die folgenden Tests wurden zuerst ergänzt und gegen unveränderte Produktionsdateien ausgeführt. Erst nach ihrem Fehlschlag wurden die Korrekturen implementiert.
 
