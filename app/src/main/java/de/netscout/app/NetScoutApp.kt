@@ -1,6 +1,7 @@
 package de.netscout.app
 
 import android.content.ActivityNotFoundException
+import android.content.Context
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -48,6 +49,7 @@ import androidx.compose.ui.unit.dp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.netscout.core.*
 import de.netscout.data.ApiSettings
+import de.netscout.data.publicSearchUrl
 import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
@@ -63,6 +65,7 @@ fun NetScoutApp(model: SearchViewModel) {
     var showSettings by rememberSaveable { mutableStateOf(false) }
     var dateField by rememberSaveable { mutableStateOf<String?>(null) }
     val focus = LocalFocusManager.current
+    val context = LocalContext.current
     val listState = rememberLazyListState()
     val scope = rememberCoroutineScope()
     val query = remember(state.keywords) { KeywordQuery.parse(state.keywords) }
@@ -84,7 +87,7 @@ fun NetScoutApp(model: SearchViewModel) {
                     Text("PROTOTYP", color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall)
                 }
             }, actions = {
-                IconButton(onClick = { showSettings = true }) { Icon(Icons.Outlined.Settings, contentDescription = "Zugänge einrichten") }
+                IconButton(onClick = { showSettings = true }) { Icon(Icons.Outlined.Settings, contentDescription = "Optionale Suchzugänge") }
             }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background))
         },
     ) { padding ->
@@ -132,7 +135,7 @@ fun NetScoutApp(model: SearchViewModel) {
                                     pair.forEach { source -> SourceChoice(source, source in state.sources, { model.toggle(source) }, Modifier.weight(1f)) }
                                 }
                             }
-                            Text("GitHub, Foren und Hacker News starten ohne Schlüssel.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                            Text("Alle sechs Quellen funktionieren ohne Schlüssel. Reddit und YouTube nutzen den öffentlichen Suchindex.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                             HorizontalDivider()
                             Column {
                                 SortOrder.entries.forEach { order ->
@@ -163,8 +166,8 @@ fun NetScoutApp(model: SearchViewModel) {
                         Surface(shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.primaryContainer) {
                             Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(6.dp)) {
                                 Text("Dein Radar fürs Netz", fontWeight = FontWeight.SemiBold)
-                                Text("Finde Beiträge und Diskussionen. Verbinde weitere Quellen für Videos, Reddit und die Websuche.", style = MaterialTheme.typography.bodyMedium)
-                                TextButton(onClick = { showSettings = true }, contentPadding = PaddingValues(0.dp)) { Text("Weitere Quellen verbinden →") }
+                                Text("Web, Reddit, YouTube, GitHub, Foren und Hacker News kostenlos durchsuchen. Keine Einrichtung nötig.", style = MaterialTheme.typography.bodyMedium)
+                                TextButton(onClick = { showSettings = true }, contentPadding = PaddingValues(0.dp)) { Text("Eigene Zugänge verwenden (optional) →") }
                             }
                         }
                     }
@@ -175,7 +178,8 @@ fun NetScoutApp(model: SearchViewModel) {
                             if (state.isSearching) LinearProgressIndicator(Modifier.fillMaxWidth())
                             state.activeRequest!!.sources.sortedBy { it.ordinal }.forEach { source ->
                                 SourceStatusRow(source, state.outcomes[source], state.sourceProgress[source], state.sourceCounts[source] ?: 0,
-                                    state.candidateCounts[source] ?: 0, { showSettings = true })
+                                    state.candidateCounts[source] ?: 0, { showSettings = true },
+                                    { openUrl(context, publicSearchUrl(source, state.activeRequest!!)) })
                             }
                             if (state.activeRequest!!.hasDateFilter) Text("Treffer ohne bekanntes Veröffentlichungsdatum werden ausgeblendet.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         }
@@ -200,7 +204,7 @@ fun NetScoutApp(model: SearchViewModel) {
                     }
                 }
                 item {
-                    Text("Live-Quellen · Abdeckung und API-Limits unterscheiden sich je Plattform. Keine vollständige Erfassung des Netzes.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Text("Kostenlos ohne Konto · Suchdienste können Anfragen begrenzen. Öffentliche Suchindizes erfassen nicht alle Inhalte.", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                 }
             }
         }
@@ -262,7 +266,7 @@ private fun SourceChoice(source: SearchSource, checked: Boolean, onClick: () -> 
 }
 
 @Composable
-private fun SourceStatusRow(source: SearchSource, outcome: SourceOutcome?, progress: SourceProgress?, count: Int, candidates: Int, connect: () -> Unit) {
+private fun SourceStatusRow(source: SearchSource, outcome: SourceOutcome?, progress: SourceProgress?, count: Int, candidates: Int, connect: () -> Unit, searchInBrowser: () -> Unit) {
     val color = when (if (progress == null) outcome?.status else null) {
         SourceStatus.SUCCESS -> MaterialTheme.colorScheme.primary
         SourceStatus.ERROR, SourceStatus.RATE_LIMITED -> MaterialTheme.colorScheme.error
@@ -278,7 +282,7 @@ private fun SourceStatusRow(source: SearchSource, outcome: SourceOutcome?, progr
                     null -> when (outcome?.status) {
                         SourceStatus.SUCCESS -> "$count Treffer" + if (outcome.cached) " · Cache" else ""
                         SourceStatus.SETUP_REQUIRED -> "Zugang nötig"
-                        SourceStatus.RATE_LIMITED -> "API-Pause"
+                        SourceStatus.RATE_LIMITED -> "Quelle pausiert"
                         SourceStatus.ERROR -> "Fehler"
                         null -> "Abgebrochen"
                     }
@@ -295,18 +299,21 @@ private fun SourceStatusRow(source: SearchSource, outcome: SourceOutcome?, progr
             if (progress == null) {
                 (outcome?.message ?: outcome?.page?.note)?.let { Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant) }
                 if (outcome?.status == SourceStatus.SETUP_REQUIRED) TextButton(onClick = connect, contentPadding = PaddingValues(0.dp)) { Text("Zugang einrichten") }
+                if (outcome?.status in setOf(SourceStatus.RATE_LIMITED, SourceStatus.ERROR)) TextButton(onClick = searchInBrowser, contentPadding = PaddingValues(0.dp)) { Text("Keywords im Browser suchen") }
             }
         }
     }
 }
 
+private fun openUrl(context: Context, url: String) {
+    try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
+    catch (_: ActivityNotFoundException) { Toast.makeText(context, "Keine App zum Öffnen des Links gefunden.", Toast.LENGTH_SHORT).show() }
+}
+
 @Composable
 private fun ResultCard(hit: SearchHit, keywords: String) {
     val context = LocalContext.current
-    fun open(url: String) {
-        try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-        catch (_: ActivityNotFoundException) { Toast.makeText(context, "Keine App zum Öffnen des Links gefunden.", Toast.LENGTH_SHORT).show() }
-    }
+    fun open(url: String) = openUrl(context, url)
     val row = hit.item
     var expanded by remember(row.id, row.snippet) { mutableStateOf(false) }
     var expandable by remember(row.id, row.snippet) { mutableStateOf(false) }
@@ -351,16 +358,16 @@ private fun AccessDialog(initial: ApiSettings, onDismiss: () -> Unit, onSave: (A
     var reddit by remember { mutableStateOf(initial.redditAccessToken) }
     var github by remember { mutableStateOf(initial.githubToken) }
     var error by remember { mutableStateOf<String?>(null) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text("Quellen verbinden") }, text = {
+    AlertDialog(onDismissRequest = onDismiss, title = { Text("Optionale Suchzugänge") }, text = {
         Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text("Optional. GitHub, Hacker News und drei Stack-Exchange-Foren funktionieren ohne Schlüssel.", style = MaterialTheme.typography.bodyMedium)
-            OutlinedTextField(searxng, { searxng = it.take(4096) }, label = { Text("SearXNG-Basis-URL") }, placeholder = { Text("https://suche.example.org/") }, singleLine = true,
+            Text("Die Suche funktioniert ohne Einrichtung. Nur ausfüllen, wenn du eigene Zugänge verwenden möchtest.", style = MaterialTheme.typography.bodyMedium)
+            OutlinedTextField(searxng, { searxng = it.take(4096) }, label = { Text("SearXNG-URL (optional)") }, placeholder = { Text("https://suche.example.org/") }, singleLine = true,
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth())
-            Text("Für Websuche sowie Reddit-/YouTube-Indexsuche. Eigene oder erlaubte HTTPS-Instanz verwenden; JSON-Ausgabe muss aktiviert sein.", style = MaterialTheme.typography.bodySmall)
-            SecretField(youtube, { youtube = it }, "YouTube Data API-Key")
-            Text("YouTube Data API v3 im Google-Projekt aktivieren. Das Suchkontingent ist begrenzt.", style = MaterialTheme.typography.bodySmall)
-            SecretField(reddit, { reddit = it }, "Reddit OAuth Access-Token")
-            Text("Benötigt genehmigten API-Zugang. Access-Tokens laufen ab und müssen im Prototyp manuell ersetzt werden.", style = MaterialTheme.typography.bodySmall)
+            Text("Optionaler eigener Suchdienst mit HTTPS und aktivierter JSON-Ausgabe. Ohne diese URL wird die öffentliche Websuche verwendet.", style = MaterialTheme.typography.bodySmall)
+            SecretField(youtube, { youtube = it }, "YouTube API-Key (optional)")
+            Text("Ermöglicht direkten API-Zugriff mit genaueren Veröffentlichungsdaten. Ohne Schlüssel werden öffentlich indexierte Videos gesucht.", style = MaterialTheme.typography.bodySmall)
+            SecretField(reddit, { reddit = it }, "Reddit OAuth-Token (optional)")
+            Text("Nur für bereits genehmigten API-Zugriff. Ohne Token werden öffentlich indexierte Diskussionen gesucht.", style = MaterialTheme.typography.bodySmall)
             SecretField(github, { github = it }, "GitHub-Token (optional)")
             Text("Erhöht das API-Limit. Nur öffentliche Inhalte werden gesucht. Alle Zugänge werden lokal verschlüsselt gespeichert.", style = MaterialTheme.typography.bodySmall)
             error?.let { Text(it, color = MaterialTheme.colorScheme.error) }

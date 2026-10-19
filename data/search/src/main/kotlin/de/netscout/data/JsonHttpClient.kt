@@ -40,6 +40,12 @@ class JsonHttpClient(
     }
 
     suspend fun get(url: HttpUrl, headers: Map<String, String> = emptyMap()): JsonObject {
+        val body = getText(url, headers)
+        return Json.parseToJsonElement(body) as? JsonObject
+            ?: throw SourceException(SourceStatus.ERROR, "Quelle liefert keine gültige Suchantwort.")
+    }
+
+    internal suspend fun getText(url: HttpUrl, headers: Map<String, String> = emptyMap()): String {
         if (cooldowns[url.host]?.isAfter(now()) == true) {
             throw SourceException(SourceStatus.RATE_LIMITED, "Quelle verlangt eine Pause. Bitte später erneut suchen.")
         }
@@ -60,7 +66,7 @@ class JsonHttpClient(
         error("Unreachable")
     }
 
-    private suspend fun execute(request: Request): JsonObject = suspendCancellableCoroutine { continuation ->
+    private suspend fun execute(request: Request): String = suspendCancellableCoroutine { continuation ->
         val call = client.newCall(request)
         continuation.invokeOnCancellation { call.cancel() }
         call.enqueue(object : Callback {
@@ -87,8 +93,7 @@ class JsonHttpClient(
                         val input = body.source()
                         input.request(2_097_153)
                         if (input.buffer.size > 2_097_152) throw SourceException(SourceStatus.ERROR, "Antwort der Quelle ist zu groß.")
-                        Json.parseToJsonElement(input.readUtf8()) as? JsonObject
-                            ?: throw SourceException(SourceStatus.ERROR, "Quelle liefert keine gültige Suchantwort.")
+                        input.readUtf8()
                     }
                 }
                 if (!continuation.isCancelled) result.fold(continuation::resume, continuation::resumeWithException)

@@ -5,9 +5,9 @@ import java.time.LocalDate
 import java.time.ZoneOffset
 
 enum class SearchSource(val label: String, val hint: String) {
-    REDDIT("Reddit", "OAuth oder Suchindex"),
-    YOUTUBE("YouTube", "API-Key oder Suchindex"),
-    WEB("Web", "SearXNG-Zugang"),
+    REDDIT("Reddit", "Ohne Schlüssel · Index"),
+    YOUTUBE("YouTube", "Ohne Schlüssel · Index"),
+    WEB("Web", "Ohne Schlüssel"),
     GITHUB("GitHub", "Repos, Issues & PRs"),
     FORUMS("Foren", "3 Stack-Exchange-Foren"),
     HACKER_NEWS("Hacker News", "Öffentliche Beiträge"),

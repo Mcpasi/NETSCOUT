@@ -4,19 +4,30 @@ import de.netscout.core.SearchCursor
 import de.netscout.core.SearchProvider
 import de.netscout.core.SearchRequest
 import de.netscout.core.SourcePage
+import de.netscout.core.SourceException
+import de.netscout.core.SourceStatus
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.withTimeoutOrNull
 
 /** Keeps direct and index cursors separate, including after a first-page fallback. */
-internal class IndexFallbackProvider(private val primary: SearchProvider, private val index: SearchProvider) : SearchProvider {
+internal class IndexFallbackProvider(
+    private val primary: SearchProvider,
+    private val index: SearchProvider,
+    private val fallbackMessage: String = "Direktzugriff fehlgeschlagen; ",
+) : SearchProvider {
     init { require(primary.source == index.source) }
     override val source = primary.source
     override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
         if (cursor?.token?.startsWith("index:") == true) return indexed(request, cursor.copy(token = cursor.token.removePrefix("index:")))
-        return try { primary.search(request, cursor) }
+        return try {
+            if (cursor != null) primary.search(request, cursor)
+            else withTimeoutOrNull(4_000) { primary.search(request, null) }
+                ?: throw SourceException(SourceStatus.ERROR, "Direktzugriff antwortet zu langsam.")
+        }
         catch (cancelled: CancellationException) { throw cancelled }
         catch (failure: Exception) {
             if (cursor != null) throw failure
-            indexed(request, null).let { it.copy(note = "Direktzugriff fehlgeschlagen; " + it.note.orEmpty()) }
+            indexed(request, null).let { it.copy(note = fallbackMessage + it.note.orEmpty()) }
         }
     }
     private suspend fun indexed(request: SearchRequest, cursor: SearchCursor?): SourcePage {

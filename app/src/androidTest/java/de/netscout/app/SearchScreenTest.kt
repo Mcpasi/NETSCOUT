@@ -12,7 +12,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SearchScreenTest {
     @get:Rule val compose = createComposeRule()
-    private fun launch(queries: CompletableDeferred<Unit>? = null, assessment: CompletableDeferred<Unit>? = null, warning: String? = null) {
+    private fun launch(queries: CompletableDeferred<Unit>? = null, assessment: CompletableDeferred<Unit>? = null, warning: String? = null, unavailableSource: SearchSource? = null) {
         val model = SearchViewModel(object : SettingsStore {
             override fun load() = SettingsRead(warning = warning)
             override fun save(settings: de.netscout.data.ApiSettings) = Unit
@@ -20,6 +20,7 @@ class SearchScreenTest {
             SearchEngine(SearchSource.entries.map { source -> object : SearchProvider {
                 override val source = source
                 override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
+                    if (source == unavailableSource) throw SourceException(SourceStatus.RATE_LIMITED, "Suchdienst verlangt eine Pause.")
                     if (source != SearchSource.GITHUB) queries?.await()
                     return SourcePage(
                     if (source != SearchSource.GITHUB) emptyList()
@@ -38,6 +39,15 @@ class SearchScreenTest {
         compose.setContent { NetScoutTheme { NetScoutApp(model) } }
     }
 
+    @Test fun blockedPublicSearchOffersTheSameKeywordsInTheBrowserWithoutRequestingAKey() {
+        launch(unavailableSource = SearchSource.WEB)
+        compose.onNodeWithText("Keywords").performTextInput("kotlin")
+        compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
+        compose.onNodeWithText("Suchdienst verlangt eine Pause.").assertIsDisplayed()
+        compose.onNodeWithText("Keywords im Browser suchen").assertIsDisplayed().assertHasClickAction()
+        compose.onNodeWithText("Zugang nötig").assertDoesNotExist()
+    }
+
     @Test fun everySelectedSourceShowsItsCurrentSearchPhase() = assertVisibleSourceProgress()
 
     @Test fun sourceProgressIsVisibleWithASettingsWarning() =
@@ -50,6 +60,7 @@ class SearchScreenTest {
         compose.onNodeWithText("Keywords").performTextInput("kotlin")
         compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
         fun inSource(source: SearchSource, text: String) = hasText(text) and hasAnyAncestor(hasTestTag("source-status-${source.name}"))
+        compose.onNode(inSource(SearchSource.WEB, "Abfrage läuft …")).assertIsDisplayed()
         compose.onNode(inSource(SearchSource.HACKER_NEWS, "Abfrage läuft …")).assertIsDisplayed()
         compose.onNode(inSource(SearchSource.FORUMS, "Abfrage läuft …")).assertIsDisplayed()
         compose.onNode(inSource(SearchSource.GITHUB, "Inhalt wird geprüft …")).assertIsDisplayed()
@@ -60,6 +71,21 @@ class SearchScreenTest {
         assessment.complete(Unit)
         compose.onNodeWithTag("search-content").performScrollToNode(hasText("Kotlin Testtreffer"))
         compose.onNodeWithText("Kotlin Testtreffer").assertIsDisplayed()
+    }
+
+    @Test fun searchSettingsAreOptionalAndAllSixSourcesCanBeSelectedWithoutCredentials() {
+        launch()
+        compose.onNodeWithContentDescription("Optionale Suchzugänge").performClick()
+        compose.onNodeWithText("Die Suche funktioniert ohne Einrichtung. Nur ausfüllen, wenn du eigene Zugänge verwenden möchtest.").assertIsDisplayed()
+        compose.onNodeWithText("Abbrechen").performClick()
+        compose.onNodeWithText("Reddit").performScrollTo().performClick()
+        compose.onNodeWithText("YouTube").performScrollTo().performClick()
+        compose.onNodeWithText("6 / 6").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Keywords").performScrollTo().performTextInput("kotlin")
+        compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
+        compose.onNodeWithTag("search-content").performScrollToNode(hasText("Kotlin Testtreffer"))
+        compose.onNodeWithText("Kotlin Testtreffer").assertIsDisplayed()
+        compose.onNodeWithText("Zugang nötig").assertDoesNotExist()
     }
 
     @Test fun pastedUnicodeSpacesShowEveryRequiredKeywordAndFindTheMatchingResult() {

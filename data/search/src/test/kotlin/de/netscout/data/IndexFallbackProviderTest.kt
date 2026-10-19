@@ -2,7 +2,10 @@ package de.netscout.data
 
 import de.netscout.core.*
 import kotlinx.coroutines.CancellationException
+import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
+import kotlinx.coroutines.test.runTest
+import kotlinx.coroutines.withTimeoutOrNull
 import org.junit.Assert.*
 import org.junit.Test
 
@@ -11,6 +14,16 @@ class IndexFallbackProviderTest {
     private fun provider(action: suspend (SearchCursor?) -> SourcePage) = object : SearchProvider {
         override val source = SearchSource.REDDIT
         override suspend fun search(request: SearchRequest, cursor: SearchCursor?) = action(cursor)
+    }
+    @Test fun `an unresponsive first page leaves time for the public fallback`() = runTest {
+        var indexCalls = 0
+        val fallback = IndexFallbackProvider(
+            provider { delay(30_000); SourcePage(emptyList()) },
+            provider { indexCalls++; SourcePage(emptyList(), note = "Indexsuche") },
+        )
+        val page = withTimeoutOrNull(18_000) { fallback.search(request, null) }
+        assertNotNull("The primary must leave time for the fallback within the engine deadline", page)
+        assertEquals(1, indexCalls)
     }
     @Test fun `fallback cursors return to index and never reach the direct provider`() = runBlocking {
         var directCalls = 0

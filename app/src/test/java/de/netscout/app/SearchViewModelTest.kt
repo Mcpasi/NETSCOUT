@@ -27,8 +27,8 @@ class SearchViewModelTest {
         } })
     }
 
-    @Test fun `HN forums and GitHub start together and report retrieval assessment and confirmed counts`() = runTest(dispatcher) {
-        val sources = setOf(SearchSource.GITHUB, SearchSource.HACKER_NEWS, SearchSource.FORUMS)
+    @Test fun `Web HN forums and GitHub start by default and report retrieval assessment and confirmed counts`() = runTest(dispatcher) {
+        val sources = setOf(SearchSource.WEB, SearchSource.GITHUB, SearchSource.HACKER_NEWS, SearchSource.FORUMS)
         val pages = sources.associateWith { CompletableDeferred<SourcePage>() }
         val calls = mutableSetOf<SearchSource>()
         val assessment = CompletableDeferred<Unit>()
@@ -80,6 +80,7 @@ class SearchViewModelTest {
             } })
         }
         model.toggle(SearchSource.GITHUB)
+        model.toggle(SearchSource.WEB)
         model.keywords("kotlin"); model.search(); advanceUntilIdle()
         assertEquals(2, model.state.value.results.size)
         model.loadMore(); runCurrent()

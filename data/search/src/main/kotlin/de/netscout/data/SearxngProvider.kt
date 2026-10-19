@@ -13,11 +13,7 @@ class SearxngProvider(
         if (instance.isBlank() || base == null) throw SourceException(SourceStatus.SETUP_REQUIRED, "SearXNG-HTTPS-URL in Zugänge einrichten; JSON muss dort aktiviert sein.")
         val page = cursor?.token?.toIntOrNull() ?: 1
         val keywords = request.keywordQuery
-        val query = when (source) {
-            SearchSource.REDDIT -> "site:reddit.com ${keywords.remoteQuery}"
-            SearchSource.YOUTUBE -> "site:youtube.com/watch ${keywords.remoteQuery}"
-            else -> keywords.remoteQuery
-        }
+        val query = indexQuery(source, request)
         val url = base.newBuilder().addPathSegment("search").addQueryParameter("q", query)
             .addQueryParameter("format", "json").addQueryParameter("pageno", page.toString())
             .addQueryParameter("language", "all").addQueryParameter("safesearch", "1").build()
@@ -27,8 +23,7 @@ class SearxngProvider(
             val link = row.text("url")
             val parsed = link.toHttpUrlOrNull() ?: return@mapIndexedNotNull null
             val host = parsed.host.removePrefix("www.")
-            if (source == SearchSource.REDDIT && host != "reddit.com" && !host.endsWith(".reddit.com")) return@mapIndexedNotNull null
-            if (source == SearchSource.YOUTUBE && host != "youtube.com" && !host.endsWith(".youtube.com") && host != "youtu.be") return@mapIndexedNotNull null
+            if (!acceptsIndexUrl(source, parsed)) return@mapIndexedNotNull null
             val body = fullText(row.text("content"))
             SearchItem(link, source, cleanHtml(row.text("title")), link, keywords.snippet(body),
                 publishedAt = parseDate(row.text("publishedDate")), rank = (cursor?.offset ?: 0) + index + 1, context = "Suchindex · $host", searchText = body)

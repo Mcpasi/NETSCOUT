@@ -14,7 +14,7 @@ import java.time.LocalDate
 
 data class SearchUiState(
     val keywords: String = "",
-    val sources: Set<SearchSource> = setOf(SearchSource.GITHUB, SearchSource.FORUMS, SearchSource.HACKER_NEWS),
+    val sources: Set<SearchSource> = setOf(SearchSource.WEB, SearchSource.GITHUB, SearchSource.FORUMS, SearchSource.HACKER_NEWS),
     val from: LocalDate? = null,
     val until: LocalDate? = null,
     val sort: SortOrder = SortOrder.RELEVANCE,

@@ -5,17 +5,22 @@ import de.netscout.core.*
 object ProviderFactory {
     fun create(settings: ApiSettings, http: JsonHttpClient = JsonHttpClient()): List<SearchProvider> {
         require(settings.validationError() == null)
-        fun withIndex(primary: SearchProvider, directConfigured: Boolean): SearchProvider {
-            if (settings.searxngUrl.isBlank()) return primary
-            val fallback = SearxngProvider(primary.source, http, settings.searxngUrl)
+        fun index(source: SearchSource): SearchProvider {
+            val public = PublicWebProvider(source, http)
+            return if (settings.searxngUrl.isBlank()) public else IndexFallbackProvider(
+                SearxngProvider(source, http, settings.searxngUrl), public, "Eigener Suchdienst nicht verfügbar; ",
+            )
+        }
+        fun withIndex(primary: SearchProvider, directConfigured: Boolean = true): SearchProvider {
+            val fallback = index(primary.source)
             if (!directConfigured) return fallback
             return IndexFallbackProvider(primary, fallback)
         }
         return listOf(
-            HackerNewsProvider(http), GitHubProvider(http, settings.githubToken), ForumsProvider(http),
+            withIndex(HackerNewsProvider(http)), withIndex(GitHubProvider(http, settings.githubToken)), withIndex(ForumsProvider(http)),
             withIndex(YouTubeProvider(http, settings.youtubeApiKey), settings.youtubeApiKey.isNotBlank()),
             withIndex(RedditProvider(http, settings.redditAccessToken), settings.redditAccessToken.isNotBlank()),
-            SearxngProvider(SearchSource.WEB, http, settings.searxngUrl),
+            index(SearchSource.WEB),
         )
     }
 }
