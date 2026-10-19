@@ -1,0 +1,153 @@
+{
+  "productionRef": "0.3.3 working tree",
+  "scope": "Same regression tests and fixtures; only production JsonHelpers.kt changed for comparison",
+  "suites": [
+    {
+      "name": "de.netscout.data.HtmlParagraphRegressionTest",
+      "tests": 5,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "unmarked plain text retains its line boundaries",
+          "passed": true
+        },
+        {
+          "name": "preformatted code retains its line boundaries",
+          "passed": true
+        },
+        {
+          "name": "explicit paragraph list and line boundaries remain separate",
+          "passed": true
+        },
+        {
+          "name": "Markdown soft wrapping keeps a single paragraph together",
+          "passed": true
+        },
+        {
+          "name": "HTML source wrapping keeps a single paragraph together",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "de.netscout.data.SearchQualityModelTest",
+      "tests": 1,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "real relevance pipeline agrees with labelled provider fixtures",
+          "passed": true
+        }
+      ]
+    },
+    {
+      "name": "de.netscout.data.SourceTextRegressionTest",
+      "tests": 24,
+      "failures": 0,
+      "errors": 0,
+      "skipped": 0,
+      "cases": [
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-inline-generic]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-fenced-generic]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-inline-future]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-description-product]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-description-generic]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[reddit-inline-generic]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[reddit-fenced-generic]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-plain-issue]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-plain-description]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[reddit-plain-client]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[hn-html-client]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[hn-escaped-generic]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[youtube-plain-tutorial]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-markdown-html]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[github-soft-wrapped-client]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[reddit-soft-wrapped-client]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[hn-soft-wrapped-client]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[negative-missing-widget]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[negative-missing-mobile]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[negative-unrelated]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[negative-disconnected-html]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[negative-soft-wrapped-sections]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[negative-substring]",
+          "passed": true
+        },
+        {
+          "name": "provider preserves required text and paragraph boundaries[negative-wrong-platform]",
+          "passed": true
+        }
+      ]
+    }
+  ]
+}

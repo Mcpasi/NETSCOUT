@@ -76,6 +76,8 @@ Ein optionaler Integrationstest prüft alle sechs Quellen ohne Zugangsdaten durc
 
 Reproduktion der vor der Korrektur nachgewiesenen Suchfehler: [docs/search-regressions.md](docs/search-regressions.md).
 
+Version **0.3.3** verhindert, dass Formatierungsumbrüche innerhalb von HTML-/Markdown-Absätzen passende Treffer verbergen. Im festen Prüfkorpus mit echtem Relevanzmodell steigt die Zahl korrekt bewerteter Fälle von **20/24 auf 24/24**; echte Absatz-, Listen- und Codegrenzen bleiben erhalten. Vorher-/Nachher-Berichte und Wiederholung: [docs/search-quality-0.3.3.md](docs/search-quality-0.3.3.md).
+
 Version **0.3.2** beachtet auch die mit HTTP 503 angeforderte `Retry-After`-Pause und erkennt ungültige JSON-Trefferlisten als Quellenfehler, damit der vorhandene Ausweichweg greifen kann. Reproduktionen vor der Korrektur und Regressionstests: [docs/bugfixes-0.3.2.md](docs/bugfixes-0.3.2.md).
 
 Die [Qualitätsmessung für 0.3.1](docs/search-quality-0.3.1.md) dokumentiert vier weitere reproduzierte Fehlerursachen, die Korrekturen und maschinenlesbare Vorher-/Nachher-Ergebnisse. Der feste Prüfkorpus umfasst Textaufbereitung mit echtem lokalem Relevanzmodell, URL-Deduplizierung und Ausweichwege bei unlesbaren Suchantworten. Er lässt sich ohne Abfragen öffentlicher Suchdienste wiederholen:

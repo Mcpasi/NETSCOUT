@@ -10,8 +10,8 @@ android {
         applicationId = "de.netscout.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = providers.gradleProperty("netscout.versionCode").orNull?.toInt() ?: 3
-        versionName = "0.3.2"
+        versionCode = providers.gradleProperty("netscout.versionCode").orNull?.toInt() ?: 4
+        versionName = "0.3.3"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {

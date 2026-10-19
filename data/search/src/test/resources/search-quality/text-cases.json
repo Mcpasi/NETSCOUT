@@ -13,10 +13,14 @@
   {"id":"hn-escaped-generic","provider":"hacker_news","keywords":"Widget,kotlin","title":"Kotlin collection example","body":"Use <code>List&lt;Widget&gt;</code> in Kotlin to store typed values.","relevant":true},
   {"id":"youtube-plain-tutorial","provider":"youtube","keywords":"Widget,kotlin","title":"Kotlin collection tutorial","body":"A tutorial about Kotlin collections and Widget values.","relevant":true},
   {"id":"github-markdown-html","provider":"github_issue","keywords":"Codex,mobile,Android","title":"Remote coding agent client","body":"<p>A native <b>Codex</b> mobile client for Android.</p>","relevant":true},
+  {"id":"github-soft-wrapped-client","provider":"github_issue","keywords":"Codex,mobile,Android","title":"Remote coding agent client","body":"A native Codex\nmobile client for\nAndroid.","relevant":true},
+  {"id":"reddit-soft-wrapped-client","provider":"reddit","keywords":"Codex,mobile,Android","title":"Remote coding agent client","body":"A native Codex\nmobile client for\nAndroid.","relevant":true},
+  {"id":"hn-soft-wrapped-client","provider":"hacker_news","keywords":"Codex,mobile,Android","title":"Remote coding agent client","body":"<p>A native Codex\nmobile client for\nAndroid.</p>","relevant":true},
   {"id":"negative-missing-widget","provider":"github_issue","keywords":"Widget,kotlin","title":"Kotlin collections","body":"A Kotlin library for ordinary strings.","relevant":false},
   {"id":"negative-missing-mobile","provider":"github_repository","keywords":"Codex,mobile,Android","title":"desktop-client","body":"A Codex desktop client; Android support is not described.","relevant":false},
   {"id":"negative-unrelated","provider":"reddit","keywords":"Widget,kotlin","title":"Gardening advice","body":"How to grow tomatoes on a balcony.","relevant":false},
   {"id":"negative-disconnected-html","provider":"hacker_news","keywords":"Codex,mobile,Android","title":"General release notes","body":"<p>Codex support for web.</p><p>Mobile Safari layout fixes.</p><p>Android notification permissions updated.</p>","relevant":false},
+  {"id":"negative-soft-wrapped-sections","provider":"github_issue","keywords":"Codex,mobile,Android","title":"General release notes","body":"Codex\nsupport for web.\n\nMobile Safari\nlayout fixes.\n\nAndroid notification\npermissions updated.","relevant":false},
   {"id":"negative-substring","provider":"hacker_news","keywords":"AI","title":"Gmail and email","body":"A chair in the railway domain.","relevant":false},
   {"id":"negative-wrong-platform","provider":"github_issue","keywords":"kotlin,Android","title":"Kotlin on iOS","body":"An iPhone application written in Kotlin.","relevant":false}
 ]

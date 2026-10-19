@@ -34,9 +34,17 @@ internal fun cleanHtml(text: String) = Jsoup.parse(text).text().trim().take(700)
 // Parse code spans/fences before HTML extraction so literal <Type> is preserved as text.
 private val markdownParser = Parser.builder().build()
 private val markdownRenderer = HtmlRenderer.builder().build()
+private val htmlWhitespace = Regex("[\\t\\n\\r\\u000C ]+")
 internal fun markdownText(text: String) = fullText(markdownRenderer.render(markdownParser.parse(text)))
 internal fun fullText(text: String): String {
     val document = Jsoup.parse(text)
+    // Source line wrapping inside an HTML paragraph is a space, not a new paragraph.
+    // Leave unmarked plain-text snippets and preformatted code lines intact.
+    document.getAllElements().forEach { element ->
+        if (element.closest("pre") == null && element.closest("p,li,div,h1,h2,h3,h4,blockquote") != null) {
+            element.textNodes().forEach { node -> node.text(node.wholeText.replace(htmlWhitespace, " ")) }
+        }
+    }
     // Keep paragraph/list boundaries for relevance. Jsoup.text() flattened unrelated sections.
     document.select("br").append("\n")
     document.select("p,li,div,pre,h1,h2,h3,h4,blockquote").append("\n")
