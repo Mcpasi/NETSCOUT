@@ -27,6 +27,8 @@ Die erste echte Produktionsprüfung mit `kotlin,android` und leeren Zugangsdaten
 
 Ein zusätzlicher Test `IndexFallbackProviderTest.an unresponsive first page leaves time for the public fallback` ließ den primären Adapter hängen. Vor der Korrektur lief das gesamte 18-Sekunden-Budget ab, ohne den Ausweichweg aufzurufen (vier Tests, einer fehlgeschlagen). Jetzt begrenzt jede Erstseitenstufe ihren primären Versuch auf vier Sekunden. Der Ausweichweg bleibt innerhalb des bestehenden Engine-Budgets erreichbar; ein echter Nutzerabbruch wird weiterhin weitergereicht.
 
+Der erste Android-CI-Lauf der schlüsselfreien Suche (`39182453688`, Commit `7634e2b`) reproduzierte einen weiteren Fehler: Zehn von elf Tests bestanden; `blockedPublicSearchOffersTheSameKeywordsInTheBrowserWithoutRequestingAKey` scheiterte an der unsichtbaren Pausenmeldung. Nach sehr schnellen Antworten konnte die Suche schon abgeschlossen sein, bevor die Oberfläche ihr Scrollen startete. Das Scrollen hing an `isSearching` und entfiel dann vollständig. Jetzt erfolgt es nach jeder gültigen Suchübernahme in einem `LaunchedEffect`, sobald der aktive Suchauftrag komponiert ist, auch bei sofortigen Fehlern oder Cache-Antworten. Der fehlgeschlagene Gerätetest wird unverändert wiederholt.
+
 ## Fortsetzung und Grenzen
 
 - Ohne feste App-Seitengrenze den tatsächlich angebotenen Fortsetzungen folgen. Ein Dienst kann weitere Seiten verweigern oder die Suche beenden.

@@ -50,7 +50,6 @@ import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import de.netscout.core.*
 import de.netscout.data.ApiSettings
 import de.netscout.data.publicSearchUrl
-import kotlinx.coroutines.launch
 import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneOffset
@@ -67,15 +66,19 @@ fun NetScoutApp(model: SearchViewModel) {
     val focus = LocalFocusManager.current
     val context = LocalContext.current
     val listState = rememberLazyListState()
-    val scope = rememberCoroutineScope()
+    var searchScrollRequest by remember { mutableIntStateOf(0) }
     val query = remember(state.keywords) { KeywordQuery.parse(state.keywords) }
+    LaunchedEffect(searchScrollRequest, state.activeRequest, state.settingsWarning) {
+        if (searchScrollRequest > 0 && state.activeRequest != null) {
+            // Wait for the submitted request to be composed, including instant/cache answers.
+            // The heading and search form precede the optional settings warning.
+            listState.scrollToItem(if (state.settingsWarning == null) 2 else 3)
+        }
+    }
     val search = {
         focus.clearFocus()
         model.search()
-        if (model.state.value.isSearching && model.state.value.error == null) scope.launch {
-            // The heading and search form precede the optional settings warning.
-            listState.animateScrollToItem(if (state.settingsWarning == null) 2 else 3)
-        }
+        if (model.state.value.activeRequest != null && model.state.value.error == null) searchScrollRequest++
         Unit
     }
     Scaffold(
