@@ -26,13 +26,13 @@ data class SearchRequest(
 ) {
     val keywordQuery: KeywordQuery by lazy { KeywordQuery.parse(keywords) }
     fun normalized() = copy(keywords = KeywordQuery.normalizeWhitespace(keywords))
-    fun validationError(): String? = when {
-        keywords.trim().length < 2 -> "Bitte mindestens zwei Zeichen eingeben."
-        keywords.length > 256 -> "Bitte höchstens 256 Zeichen eingeben."
-        !keywordQuery.balancedQuotes -> "Bitte die Anführungszeichen der Suchphrase schließen."
-        keywordQuery.terms.isEmpty() -> "Bitte Suchbegriffe mit Buchstaben oder Zahlen eingeben."
-        sources.isEmpty() -> "Bitte mindestens eine Quelle auswählen."
-        from != null && until != null && from > until -> "Das Von-Datum muss vor oder am Bis-Datum liegen."
+    fun validationError(): SearchMessage? = when {
+        keywords.trim().length < 2 -> SearchMessage(MessageKey.QUERY_TOO_SHORT)
+        keywords.length > 256 -> SearchMessage(MessageKey.QUERY_TOO_LONG)
+        !keywordQuery.balancedQuotes -> SearchMessage(MessageKey.QUERY_QUOTES)
+        keywordQuery.terms.isEmpty() -> SearchMessage(MessageKey.QUERY_TERMS)
+        sources.isEmpty() -> SearchMessage(MessageKey.QUERY_SOURCES)
+        from != null && until != null && from > until -> SearchMessage(MessageKey.QUERY_DATES)
         else -> null
     }
     val hasDateFilter get() = from != null || until != null
@@ -58,19 +58,24 @@ data class SearchItem(
     val license: String? = null,
     val searchText: String = snippet,
     val assessment: RelevanceAssessment? = null,
+    val contextMessage: SearchMessage? = null,
 )
 
 data class SearchCursor(val token: String, val offset: Int = 0)
-data class SourcePage(val items: List<SearchItem>, val nextCursor: SearchCursor? = null, val note: String? = null)
+data class SourcePage(val items: List<SearchItem>, val nextCursor: SearchCursor? = null, val notes: List<SearchMessage> = emptyList()) {
+    val note: String? get() = notes.takeIf { it.isNotEmpty() }?.joinToString("") { it.text }
+}
 enum class SourcePhase { FETCHING, ASSESSING }
 data class SourceProgress(val source: SearchSource, val phase: SourcePhase, val candidateCount: Int = 0)
 enum class SourceStatus { SUCCESS, SETUP_REQUIRED, RATE_LIMITED, ERROR }
-class SourceException(val status: SourceStatus, override val message: String) : Exception(message)
+class SourceException(val status: SourceStatus, val userMessage: SearchMessage) : Exception(userMessage.text) {
+    override val message: String get() = userMessage.text
+}
 data class SourceOutcome(
     val source: SearchSource,
     val status: SourceStatus,
     val page: SourcePage = SourcePage(emptyList()),
-    val message: String? = null,
+    val message: SearchMessage? = null,
     val cached: Boolean = false,
 )
 

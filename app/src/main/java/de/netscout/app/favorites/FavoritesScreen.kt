@@ -1,5 +1,6 @@
 package de.netscout.app.favorites
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
@@ -12,6 +13,7 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import de.netscout.app.ResultCard
+import de.netscout.app.R
 
 @Composable
 internal fun FavoritesScreen(state: FavoritesState, onRetry: () -> Unit, onRemove: (Favorite) -> Unit) {
@@ -22,10 +24,10 @@ internal fun FavoritesScreen(state: FavoritesState, onRetry: () -> Unit, onRemov
     ) {
         item {
             Column(verticalArrangement = Arrangement.spacedBy(6.dp)) {
-                Text("Favoriten", style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
+                Text(stringResource(R.string.favorites), style = MaterialTheme.typography.headlineLarge, fontWeight = FontWeight.Bold,
                     modifier = Modifier.semantics { heading() })
-                Text("${state.entries.size} / $MAX_FAVORITES gespeichert", color = MaterialTheme.colorScheme.primary)
-                Text("Auf diesem Gerät gespeichert – auch nach einem Neustart. Mit dem Stern entfernst du einen Favoriten.",
+                Text(stringResource(R.string.favorites_count, state.entries.size, MAX_FAVORITES), color = MaterialTheme.colorScheme.primary)
+                Text(stringResource(R.string.favorites_help),
                     style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
@@ -33,12 +35,12 @@ internal fun FavoritesScreen(state: FavoritesState, onRetry: () -> Unit, onRemov
             state.isLoading -> item { LinearProgressIndicator(Modifier.fillMaxWidth()) }
             !state.isLoaded -> item {
                 Column {
-                    Text("Favoriten konnten nicht geladen werden.", color = MaterialTheme.colorScheme.error)
-                    TextButton(onClick = onRetry) { Text("Erneut laden") }
+                    Text(stringResource(R.string.favorites_load_failed), color = MaterialTheme.colorScheme.error)
+                    TextButton(onClick = onRetry) { Text(stringResource(R.string.retry_load)) }
                 }
             }
             state.entries.isEmpty() -> item {
-                Text("Noch keine Favoriten. Tippe nach einer Suche auf den Stern eines Treffers.",
+                Text(stringResource(R.string.favorites_empty),
                     color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }

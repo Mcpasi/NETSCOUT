@@ -30,9 +30,10 @@ class HackerNewsProvider(
             val body = fullText(row.text("story_text"))
             SearchItem(id, source, cleanHtml(row.text("title")), "https://news.ycombinator.com/item?id=$id",
                 query.snippet(body), row.text("author"),
-                epoch(row.decimal("created_at_i")), (cursor?.offset ?: 0) + index + 1, "Hacker News · ${row.number("points")} Punkte", searchText = body)
+                epoch(row.decimal("created_at_i")), (cursor?.offset ?: 0) + index + 1, "Hacker News · ${row.number("points")} Punkte", searchText = body,
+                contextMessage = SearchMessage(MessageKey.HN_CONTEXT, row.number("points").toString()))
         }
         val next = if (page + 1 < result.number("nbPages")) SearchCursor((page + 1).toString(), (cursor?.offset ?: 0) + rows.size) else null
-        return SourcePage(items, next, "HN-Beiträge über Algolia; Link öffnet die Diskussion.")
+        return SourcePage(items, next, listOf(SearchMessage(MessageKey.HN_NOTE)))
     }
 }

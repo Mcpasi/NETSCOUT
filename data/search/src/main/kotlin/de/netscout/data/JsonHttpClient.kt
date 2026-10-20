@@ -1,5 +1,7 @@
 package de.netscout.data
 
+import de.netscout.core.MessageKey
+import de.netscout.core.SearchMessage
 import de.netscout.core.SourceException
 import de.netscout.core.SourceStatus
 import kotlinx.coroutines.CancellationException
@@ -42,12 +44,12 @@ class JsonHttpClient(
     suspend fun get(url: HttpUrl, headers: Map<String, String> = emptyMap()): JsonObject {
         val body = getText(url, headers)
         return Json.parseToJsonElement(body) as? JsonObject
-            ?: throw SourceException(SourceStatus.ERROR, "Quelle liefert keine gültige Suchantwort.")
+            ?: throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.INVALID_RESPONSE))
     }
 
     internal suspend fun getText(url: HttpUrl, headers: Map<String, String> = emptyMap()): String {
         if (cooldowns[url.host]?.isAfter(now()) == true) {
-            throw SourceException(SourceStatus.RATE_LIMITED, "Quelle verlangt eine Pause. Bitte später erneut suchen.")
+            throw SourceException(SourceStatus.RATE_LIMITED, SearchMessage(MessageKey.SOURCE_PAUSE_SEARCH))
         }
         val request = Request.Builder().url(url)
             .header("User-Agent", "android:de.netscout.app:v0.1 (NetScout keyword search)")
@@ -87,15 +89,15 @@ class JsonHttpClient(
                                 }.getOrNull()
                             } ?: it.header("X-RateLimit-Reset")?.toLongOrNull()?.minus(now().epochSecond) ?: 60
                             postpone(request.url.host, retry)
-                            throw SourceException(SourceStatus.RATE_LIMITED, "Quelle verlangt eine Pause. Bitte später erneut versuchen.")
+                            throw SourceException(SourceStatus.RATE_LIMITED, SearchMessage(MessageKey.SOURCE_PAUSE_RETRY))
                         }
                         if (it.code >= 500) throw IOException("Temporary server failure")
-                        if (it.code == 401 || it.code == 403) throw SourceException(SourceStatus.SETUP_REQUIRED, "Zugang abgelehnt oder Kontingent verbraucht. Einstellungen prüfen.")
-                        if (!it.isSuccessful) throw SourceException(SourceStatus.ERROR, "Suchanfrage von der Quelle abgelehnt (HTTP ${it.code}).")
+                        if (it.code == 401 || it.code == 403) throw SourceException(SourceStatus.SETUP_REQUIRED, SearchMessage(MessageKey.ACCESS_REJECTED))
+                        if (!it.isSuccessful) throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.HTTP_REJECTED, it.code.toString()))
                         val body = it.body ?: throw IOException("Empty body")
                         val input = body.source()
                         input.request(2_097_153)
-                        if (input.buffer.size > 2_097_152) throw SourceException(SourceStatus.ERROR, "Antwort der Quelle ist zu groß.")
+                        if (input.buffer.size > 2_097_152) throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.RESPONSE_TOO_LARGE))
                         input.readUtf8()
                     }
                 }

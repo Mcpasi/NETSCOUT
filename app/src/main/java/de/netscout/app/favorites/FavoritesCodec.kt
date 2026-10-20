@@ -4,6 +4,8 @@ import de.netscout.core.RelevanceAssessment
 import de.netscout.core.ResultMerger
 import de.netscout.core.SearchItem
 import de.netscout.core.SearchSource
+import de.netscout.core.MessageKey
+import de.netscout.core.SearchMessage
 import kotlinx.serialization.json.*
 import java.time.Instant
 
@@ -24,6 +26,12 @@ internal object FavoritesCodec {
                     item.publishedAt?.let { put("publishedAt", it.toString()) }
                     put("rank", item.rank)
                     put("context", item.context)
+                    item.contextMessage?.let { message ->
+                        putJsonObject("contextMessage") {
+                            put("key", message.key.name)
+                            putJsonArray("arguments") { message.arguments.forEach { add(it) } }
+                        }
+                    }
                     item.license?.let { put("license", it) }
                     item.assessment?.let { assessment ->
                         putJsonObject("assessment") {
@@ -63,8 +71,33 @@ internal object FavoritesCodec {
                     publishedAt = row["publishedAt"]?.jsonPrimitive?.content?.let(Instant::parse),
                     rank = row.getValue("rank").jsonPrimitive.int, context = string("context"),
                     license = row["license"]?.jsonPrimitive?.content, assessment = assessment,
+                    contextMessage = row["contextMessage"]?.jsonObject?.let { message ->
+                        val key = MessageKey.valueOf(message.getValue("key").jsonPrimitive.content)
+                        val arguments = message.getValue("arguments").jsonArray.map { it.jsonPrimitive.content }
+                        val expected = when (key) {
+                            MessageKey.PUBLIC_CONTEXT -> 2
+                            MessageKey.SEARX_CONTEXT, MessageKey.HN_CONTEXT -> 1
+                            else -> error("Unsupported source metadata message")
+                        }
+                        require(arguments.size == expected)
+                        SearchMessage(key, arguments)
+                    } ?: legacyContext(string("context")),
                 ), sources, string("keywords"),
             )
         }.also { favorites -> require(favorites.distinctBy { it.id }.size == favorites.size) }
+    }
+
+    /** Recognize only app-generated metadata from favorites saved before localization. */
+    private fun legacyContext(context: String): SearchMessage? {
+        Regex("^(Brave|DuckDuckGo) · öffentlicher Suchindex · ([a-zA-Z0-9.:-]+)$").matchEntire(context)?.let {
+            return SearchMessage(MessageKey.PUBLIC_CONTEXT, it.groupValues[1], it.groupValues[2])
+        }
+        Regex("^Suchindex · ([a-zA-Z0-9.:-]+)$").matchEntire(context)?.let {
+            return SearchMessage(MessageKey.SEARX_CONTEXT, it.groupValues[1])
+        }
+        Regex("^Hacker News · ([0-9]+) Punkte$").matchEntire(context)?.let {
+            return SearchMessage(MessageKey.HN_CONTEXT, it.groupValues[1])
+        }
+        return null
     }
 }

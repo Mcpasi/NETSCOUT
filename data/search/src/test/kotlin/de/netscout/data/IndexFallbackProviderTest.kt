@@ -19,7 +19,7 @@ class IndexFallbackProviderTest {
         var indexCalls = 0
         val fallback = IndexFallbackProvider(
             provider { delay(30_000); SourcePage(emptyList()) },
-            provider { indexCalls++; SourcePage(emptyList(), note = "Indexsuche") },
+            provider { indexCalls++; SourcePage(emptyList(), notes = listOf(SearchMessage(MessageKey.SEARX_NOTE))) },
         )
         val page = withTimeoutOrNull(18_000) { fallback.search(request, null) }
         assertNotNull("The primary must leave time for the fallback within the engine deadline", page)
@@ -29,8 +29,8 @@ class IndexFallbackProviderTest {
         var directCalls = 0
         val indexCursors = mutableListOf<SearchCursor?>()
         val fallback = IndexFallbackProvider(
-            provider { directCalls++; throw SourceException(SourceStatus.RATE_LIMITED, "Pause") },
-            provider { cursor -> indexCursors += cursor; SourcePage(emptyList(), if (cursor == null) SearchCursor("2", 20) else null, "Indexsuche") },
+            provider { directCalls++; throw SourceException(SourceStatus.RATE_LIMITED, SearchMessage(MessageKey.SOURCE_PAUSE_RETRY)) },
+            provider { cursor -> indexCursors += cursor; SourcePage(emptyList(), if (cursor == null) SearchCursor("2", 20) else null, listOf(SearchMessage(MessageKey.SEARX_NOTE))) },
         )
         val first = fallback.search(request, null)
         assertTrue(first.note!!.contains("Direktzugriff fehlgeschlagen"))

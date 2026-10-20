@@ -10,7 +10,7 @@ class SearxngProvider(
 ) : SearchProvider {
     override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
         val base = instance.trimEnd('/').plus('/').toHttpUrlOrNull()
-        if (instance.isBlank() || base == null) throw SourceException(SourceStatus.SETUP_REQUIRED, "SearXNG-HTTPS-URL in Zugänge einrichten; JSON muss dort aktiviert sein.")
+        if (instance.isBlank() || base == null) throw SourceException(SourceStatus.SETUP_REQUIRED, SearchMessage(MessageKey.SEARX_SETUP))
         val page = cursor?.token?.toIntOrNull() ?: 1
         val keywords = request.keywordQuery
         val query = indexQuery(source, request)
@@ -26,11 +26,14 @@ class SearxngProvider(
             if (!acceptsIndexUrl(source, parsed)) return@mapIndexedNotNull null
             val body = fullText(row.text("content"))
             SearchItem(link, source, cleanHtml(row.text("title")), link, keywords.snippet(body),
-                publishedAt = parseDate(row.text("publishedDate")), rank = (cursor?.offset ?: 0) + index + 1, context = "Suchindex · $host", searchText = body)
+                publishedAt = parseDate(row.text("publishedDate")), rank = (cursor?.offset ?: 0) + index + 1, context = "Suchindex · $host", searchText = body,
+                contextMessage = SearchMessage(MessageKey.SEARX_CONTEXT, host))
         }
         val next = if (rows.isNotEmpty() && page < 10) SearchCursor((page + 1).toString(), (cursor?.offset ?: 0) + rows.size) else null
         val warnings = json.array("unresponsive_engines").size
-        return SourcePage(items, next, "Indexsuche über SearXNG. Datum nur bei bekanntem Veröffentlichungsdatum; keine garantierte Vollständigkeit." +
-            if (warnings > 0) " $warnings Suchmaschinen nicht erreichbar." else "")
+        return SourcePage(items, next, buildList {
+            add(SearchMessage(MessageKey.SEARX_NOTE))
+            if (warnings > 0) add(SearchMessage(MessageKey.SEARX_UNAVAILABLE, warnings.toString()))
+        })
     }
 }

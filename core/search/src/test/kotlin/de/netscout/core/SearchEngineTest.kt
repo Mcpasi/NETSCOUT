@@ -41,7 +41,7 @@ class SearchEngineTest {
     @Test fun `source failure does not cancel other sources and results arrive independently`() = runTest {
         val engine = SearchEngine(listOf(
             provider(SearchSource.GITHUB) { delay(2_000); SourcePage(emptyList()) },
-            provider(SearchSource.HACKER_NEWS) { throw SourceException(SourceStatus.RATE_LIMITED, "Pause") },
+            provider(SearchSource.HACKER_NEWS) { throw SourceException(SourceStatus.RATE_LIMITED, SearchMessage(MessageKey.SOURCE_PAUSE_RETRY)) },
         ))
         val results = mutableListOf<SourceOutcome>()
         val job = launch { engine.search(request).toList(results) }
@@ -69,7 +69,7 @@ class SearchEngineTest {
         repeat(2) {
             val outcome = engine.search(request.copy(sources = setOf(SearchSource.GITHUB))).toList().single()
             assertEquals(SourceStatus.ERROR, outcome.status)
-            assertFalse(outcome.message!!.contains("private"))
+            assertFalse(outcome.message!!.text.contains("private"))
         }
         assertEquals(2, calls)
     }
@@ -104,7 +104,7 @@ class SearchEngineTest {
         val page = SourcePage(listOf(SearchItem("1", SearchSource.GITHUB, "Kotlin", "https://example.org/1")))
         val engine = SearchEngine(listOf(provider(SearchSource.GITHUB) { page }), relevance = SearchRelevance { _, result ->
             evaluations++
-            if (evaluations == 1) throw SourceException(SourceStatus.ERROR, "Relevance unavailable")
+            if (evaluations == 1) throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.RELEVANCE_FAILED))
             result.copy(items = result.items.map { it.copy(assessment = RelevanceAssessment(true, 7.0, "Evidence", true)) })
         })
         val failed = engine.search(input).toList().single()

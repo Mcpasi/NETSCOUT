@@ -10,8 +10,8 @@ android {
         applicationId = "de.netscout.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = 6
-        versionName = "0.3.5"
+        versionCode = 8
+        versionName = "0.3.7"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -37,6 +37,8 @@ android {
     }
     kotlinOptions { jvmTarget = "17" }
     buildFeatures { compose = true }
+    // Runtime language switching needs both translations in every installation.
+    bundle { language { enableSplit = false } }
     packaging {
         resources.excludes += "/META-INF/{AL2.0,LGPL2.1}"
         jniLibs.useLegacyPackaging = true

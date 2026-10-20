@@ -52,7 +52,7 @@ class FavoritesRepositoryTest {
         assertEquals(original, repository.state.value.entries)
         assertEquals(original, store.entries)
         assertEquals(20, store.writes)
-        assertTrue(repository.state.value.error!!.contains("höchstens 20"))
+        assertTrue(repository.state.value.error!!.text.contains("höchstens 20"))
         repository.remove(favorite(4).id)
         repository.toggle(favorite(21))
         assertEquals(20, store.entries.size)

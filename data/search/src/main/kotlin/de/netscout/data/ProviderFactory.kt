@@ -8,7 +8,7 @@ object ProviderFactory {
         fun index(source: SearchSource): SearchProvider {
             val public = PublicWebProvider(source, http)
             return if (settings.searxngUrl.isBlank()) public else IndexFallbackProvider(
-                SearxngProvider(source, http, settings.searxngUrl), public, "Eigener Suchdienst nicht verfügbar; ",
+                SearxngProvider(source, http, settings.searxngUrl), public, SearchMessage(MessageKey.FALLBACK_CUSTOM),
             )
         }
         fun withIndex(primary: SearchProvider, directConfigured: Boolean = true): SearchProvider {

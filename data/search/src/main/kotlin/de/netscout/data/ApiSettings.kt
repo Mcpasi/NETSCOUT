@@ -1,5 +1,7 @@
 package de.netscout.data
 
+import de.netscout.core.MessageKey
+import de.netscout.core.SearchMessage
 import okhttp3.HttpUrl.Companion.toHttpUrlOrNull
 
 data class ApiSettings(
@@ -8,11 +10,11 @@ data class ApiSettings(
     val redditAccessToken: String = "",
     val githubToken: String = "",
 ) {
-    fun validationError(): String? {
+    fun validationError(): SearchMessage? {
         if (searxngUrl.isBlank()) return null
         val url = searxngUrl.toHttpUrlOrNull()
         return if (url == null || !url.isHttps || url.username.isNotEmpty() || url.password.isNotEmpty() || url.query != null || url.fragment != null) {
-            "Bitte eine HTTPS-Basis-URL ohne Zugangsdaten, Query oder Fragment eingeben."
+            SearchMessage(MessageKey.ACCESS_URL)
         } else null
     }
 

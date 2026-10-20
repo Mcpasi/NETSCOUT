@@ -54,9 +54,11 @@ class GitHubProvider(
         }
         val next = if (successes.any { it.rows("items").isNotEmpty() && page * 30 < minOf(it.number("total_count"), 1_000) })
             SearchCursor((page + 1).toString(), (cursor?.offset ?: 0) + 90) else null
-        val note = "Öffentliche Repositories, Issues und Pull Requests; alle Sprachen. Drei API-Abfragen pro Seite. " +
-            (if (responses.any { it.isFailure }) "Teilabfrage fehlgeschlagen. " else "") +
-            (if (successes.any { it.flag("incomplete_results") }) "GitHub meldet unvollständige Ergebnisse. Suchbegriffe eingrenzen." else "Kein Code-Suchindex.")
-        SourcePage(items, next, note)
+        val notes = buildList {
+            add(SearchMessage(MessageKey.GITHUB_NOTE))
+            if (responses.any { it.isFailure }) add(SearchMessage(MessageKey.GITHUB_PARTIAL))
+            add(SearchMessage(if (successes.any { it.flag("incomplete_results") }) MessageKey.GITHUB_INCOMPLETE else MessageKey.GITHUB_NO_CODE))
+        }
+        SourcePage(items, next, notes)
     }
 }

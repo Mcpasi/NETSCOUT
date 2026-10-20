@@ -1,5 +1,7 @@
 package de.netscout.app
 
+import de.netscout.core.MessageKey
+import de.netscout.core.SearchMessage
 import android.content.Context
 import android.security.keystore.KeyGenParameterSpec
 import android.security.keystore.KeyProperties
@@ -15,7 +17,7 @@ import javax.crypto.KeyGenerator
 import javax.crypto.SecretKey
 import javax.crypto.spec.GCMParameterSpec
 
-data class SettingsRead(val settings: ApiSettings = ApiSettings(), val warning: String? = null)
+data class SettingsRead(val settings: ApiSettings = ApiSettings(), val warning: SearchMessage? = null)
 interface SettingsStore {
     fun load(): SettingsRead
     fun save(settings: ApiSettings)
@@ -42,7 +44,7 @@ class EncryptedSettingsStore(context: Context) : SettingsStore {
             DataInputStream(ByteArrayInputStream(cipher.doFinal(encoded.copyOfRange(12, encoded.size)))).use {
                 SettingsRead(ApiSettings(it.readUTF(), it.readUTF(), it.readUTF(), it.readUTF()))
             }
-        }.getOrElse { SettingsRead(warning = "Gespeicherte Zugänge konnten nicht gelesen werden. Bitte neu eingeben.") }
+        }.getOrElse { SettingsRead(warning = SearchMessage(MessageKey.ACCESS_LOAD_FAILED)) }
     }
 
     override fun save(settings: ApiSettings) {

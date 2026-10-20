@@ -1,5 +1,6 @@
 package de.netscout.app
 
+import androidx.compose.ui.res.stringResource
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.*
@@ -23,9 +24,6 @@ import de.netscout.core.KeywordQuery
 import de.netscout.core.SearchItem
 import de.netscout.core.SearchSource
 import java.time.ZoneOffset
-import java.time.format.DateTimeFormatter
-
-private val ResultDateFormat = DateTimeFormatter.ofPattern("dd.MM.yyyy")
 
 @Composable
 internal fun ResultCard(
@@ -45,27 +43,28 @@ internal fun ResultCard(
     Surface(onClick = { open(row.url) }, shape = RoundedCornerShape(16.dp), color = MaterialTheme.colorScheme.surface, border = BorderStroke(1.dp, MaterialTheme.colorScheme.outline.copy(alpha = .4f))) {
         Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
             Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
-                Text(sources.joinToString(" + ") { it.label } + " · " + (row.publishedAt?.atZone(ZoneOffset.UTC)?.toLocalDate()?.format(ResultDateFormat) ?: "Datum unbekannt"),
+                val sourceNames = sources.map { sourceLabel(it) }.joinToString(" + ")
+                Text(sourceNames + " · " + (row.publishedAt?.atZone(ZoneOffset.UTC)?.toLocalDate()?.format(dateFormat()) ?: stringResource(R.string.date_unknown)),
                     modifier = Modifier.weight(1f), style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.primary)
                 IconToggleButton(checked = isFavorite, onCheckedChange = { onToggleFavorite() }, enabled = favoriteEnabled) {
                     Icon(if (isFavorite) Icons.Filled.Star else Icons.Outlined.Star,
-                        contentDescription = if (isFavorite) "Aus Favoriten entfernen" else "Zu Favoriten hinzufügen")
+                        contentDescription = if (isFavorite) stringResource(R.string.favorite_remove) else stringResource(R.string.favorite_add))
                 }
             }
             Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
                 Text(highlighted(row.title.ifBlank { row.url }, query, highlight), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold, modifier = Modifier.weight(1f))
-                Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = "Treffer im Browser öffnen", modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Icon(painterResource(R.drawable.ic_open_in_new), contentDescription = stringResource(R.string.open_result), modifier = Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
             }
-            if (row.assessment?.semantic == true) Text("Inhaltlich bewertet · passende Textstelle", style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
+            if (row.assessment?.semantic == true) Text(stringResource(R.string.semantic_result), style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary)
             if (row.snippet.isNotBlank()) {
                 Text(highlighted(row.snippet, query, highlight), maxLines = if (expanded) Int.MAX_VALUE else 8,
                     overflow = TextOverflow.Ellipsis, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.onSurfaceVariant,
                     onTextLayout = { if (!expanded) expandable = it.hasVisualOverflow })
                 if (expandable || expanded) TextButton(onClick = { expanded = !expanded }, contentPadding = PaddingValues(0.dp)) {
-                    Text(if (expanded) "Textstelle kürzen" else "Vollständige Textstelle anzeigen")
+                    Text(if (expanded) stringResource(R.string.collapse_passage) else stringResource(R.string.expand_passage))
                 }
             }
-            Text(listOf(row.author, row.context).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Text(listOf(row.author, row.contextMessage?.let { messageText(it) } ?: row.context).filter { it.isNotBlank() }.joinToString(" · "), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             row.license?.let { license ->
                 Text(license, style = MaterialTheme.typography.labelSmall, color = MaterialTheme.colorScheme.primary,
                     modifier = Modifier.clickable { open(if (license.contains("4.0")) "https://creativecommons.org/licenses/by-sa/4.0/" else "https://stackoverflow.com/help/licensing") }.padding(vertical = 8.dp))

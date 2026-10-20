@@ -75,7 +75,7 @@ class SemanticRelevance(private val scorerFactory: () -> PassageScorer) : Search
             } catch (cancelled: CancellationException) { throw cancelled }
             catch (_: Exception) {
                 // Never silently revert to the old word-presence list or expose model/file details.
-                throw SourceException(SourceStatus.ERROR, "Inhaltliche Trefferprüfung fehlgeschlagen. Bitte die Suche erneut starten.")
+                throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.RELEVANCE_FAILED))
             }
         }
     }

@@ -26,9 +26,9 @@ data class SearchUiState(
     val candidateCounts: Map<SearchSource, Int> = emptyMap(),
     val unmatchedCount: Int = 0,
     val isSearching: Boolean = false,
-    val error: String? = null,
+    val error: SearchMessage? = null,
     val settings: ApiSettings = ApiSettings(),
-    val settingsWarning: String? = null,
+    val settingsWarning: SearchMessage? = null,
 ) {
     fun request() = SearchRequest(keywords, sources, from, until, sort).normalized()
     val filtersChanged get() = activeRequest != null && request() != activeRequest
@@ -110,7 +110,7 @@ class SearchViewModel(
         }
     }
 
-    fun saveSettings(value: ApiSettings): String? {
+    fun saveSettings(value: ApiSettings): SearchMessage? {
         val settings = value.copy(searxngUrl = value.searxngUrl.trim(), youtubeApiKey = value.youtubeApiKey.trim(),
             redditAccessToken = value.redditAccessToken.trim(), githubToken = value.githubToken.trim())
         settings.validationError()?.let { return it }
@@ -121,6 +121,6 @@ class SearchViewModel(
             items.clear()
             mutableState.update { it.copy(settings = settings, settingsWarning = null, activeRequest = null, results = emptyList(), outcomes = emptyMap(), sourceCounts = emptyMap(), candidateCounts = emptyMap(), unmatchedCount = 0) }
             null
-        } catch (_: Exception) { "Zugänge konnten nicht verschlüsselt gespeichert werden. Bitte erneut versuchen." }
+        } catch (_: Exception) { SearchMessage(MessageKey.ACCESS_SAVE_FAILED) }
     }
 }

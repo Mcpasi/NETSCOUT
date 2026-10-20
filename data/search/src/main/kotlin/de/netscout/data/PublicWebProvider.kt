@@ -30,7 +30,7 @@ class PublicWebProvider(
     private val delegate = IndexFallbackProvider(
         HtmlSearchProvider(source, http, PublicSearchBackend.BRAVE, braveEndpoint),
         HtmlSearchProvider(source, http, PublicSearchBackend.DUCKDUCKGO, duckEndpoint),
-        "Erster Suchdienst nicht verfügbar; ",
+        SearchMessage(MessageKey.FALLBACK_PUBLIC),
     )
 
     override suspend fun search(request: SearchRequest, cursor: SearchCursor?) = delegate.search(request, cursor)
@@ -59,11 +59,11 @@ internal class HtmlSearchProvider(
         }.build()
         val html = try {
             withTimeoutOrNull(6_000) { http.getText(url, mapOf("Accept" to "text/html")) }
-                ?: throw SourceException(SourceStatus.ERROR, "Öffentlicher Suchdienst antwortet zu langsam.")
+                ?: throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.PUBLIC_TIMEOUT))
         } catch (failure: SourceException) {
             if (failure.status != SourceStatus.SETUP_REQUIRED) throw failure
             http.postpone(endpoint.host, 600)
-            throw SourceException(SourceStatus.RATE_LIMITED, "Öffentlicher Suchdienst blockiert die Anfrage vorübergehend. Bitte später erneut suchen.")
+            throw SourceException(SourceStatus.RATE_LIMITED, SearchMessage(MessageKey.PUBLIC_BLOCKED))
         }
         val document = Jsoup.parse(html, endpoint.toString())
         val rows = if (backend == PublicSearchBackend.BRAVE) document.select(".snippet[data-type=web]")
@@ -71,9 +71,9 @@ internal class HtmlSearchProvider(
         if (document.select(".anomaly-modal, #challenge-form, #captcha, form[action*=anomaly], form[action*=captcha]").isNotEmpty() ||
             rows.isEmpty() && Regex("captcha|verify (?:that )?you are human|security verification", RegexOption.IGNORE_CASE).containsMatchIn(document.title())) {
             http.postpone(endpoint.host, 600)
-            throw SourceException(SourceStatus.RATE_LIMITED, "Suchdienst verlangt eine Browserprüfung. Bitte später erneut suchen oder einen eigenen Suchdienst verwenden.")
+            throw SourceException(SourceStatus.RATE_LIMITED, SearchMessage(MessageKey.PUBLIC_CHALLENGE))
         }
-        if (rows.isEmpty() && !emptyResults(document)) throw SourceException(SourceStatus.ERROR, "Suchdienst liefert keine lesbare Trefferliste. Bitte später erneut versuchen.")
+        if (rows.isEmpty() && !emptyResults(document)) throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.PUBLIC_UNREADABLE))
         var readableRows = 0
         val items = rows.mapIndexedNotNull { index, row ->
             val titleNode = row.selectFirst(if (backend == PublicSearchBackend.BRAVE) ".title" else ".result__a") ?: return@mapIndexedNotNull null
@@ -88,14 +88,18 @@ internal class HtmlSearchProvider(
             val body = content?.let { fullText(it.html()) }.orEmpty()
             SearchItem(link.toString(), source, title, link.toString(), request.keywordQuery.snippet(body),
                 publishedAt = publishedDate(row), rank = (cursor?.offset ?: 0) + index + 1,
-                context = "${backend.label} · öffentlicher Suchindex · ${link.host}", searchText = body)
+                context = "${backend.label} · öffentlicher Suchindex · ${link.host}", searchText = body,
+                contextMessage = SearchMessage(MessageKey.PUBLIC_CONTEXT, backend.label, link.host))
         }.distinctBy { it.url }
         if (rows.isNotEmpty() && readableRows == 0) throw SourceException(SourceStatus.ERROR,
-            "Suchdienst liefert keine lesbare Trefferliste. Bitte später erneut versuchen.")
+            SearchMessage(MessageKey.PUBLIC_UNREADABLE))
         val next = if (rows.isEmpty()) null else nextCursor(document, query, parameters, (cursor?.offset ?: 0) + rows.size)
-        return SourcePage(items, next, "Ohne Schlüssel über ${backend.label}. " +
-            (if (source == SearchSource.WEB) "Bewertet werden Titel und Index-Textstellen. " else "Öffentlich indexierte ${source.label}-Seiten; kein vollständiger Direktzugriff. ") +
-            "Datum nur bei ausdrücklich bekanntem Veröffentlichungsdatum. Suchdienste können Anfragen begrenzen.")
+        return SourcePage(items, next, listOf(
+            SearchMessage(MessageKey.PUBLIC_NOTE, backend.label),
+            if (source == SearchSource.WEB) SearchMessage(MessageKey.PUBLIC_WEB_NOTE)
+            else SearchMessage(MessageKey.PUBLIC_SOURCE_NOTE, source.name),
+            SearchMessage(MessageKey.PUBLIC_DATE_NOTE),
+        ))
     }
 
     private fun cursorParameters(cursor: SearchCursor?): Map<String, String> {
@@ -146,7 +150,7 @@ internal class HtmlSearchProvider(
     private fun emptyResults(document: Document): Boolean = document.select(".no-results, .no-results__message, #no-results").isNotEmpty() ||
         Regex("^(No results found|No results for|No matching results|Keine Ergebnisse)", RegexOption.IGNORE_CASE).containsMatchIn(document.selectFirst("main")?.text().orEmpty())
 
-    private fun invalidCursor(): Nothing = throw SourceException(SourceStatus.ERROR, "Ungültige Suchseite. Bitte die Suche erneut starten.")
+    private fun invalidCursor(): Nothing = throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.INVALID_CURSOR))
 
     private companion object {
         val duckParameters = setOf("s", "dc", "vqd", "nextParams", "v", "o", "api")

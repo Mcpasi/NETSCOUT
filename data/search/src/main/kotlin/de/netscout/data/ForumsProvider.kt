@@ -30,7 +30,7 @@ class ForumsProvider(
                     }.build()
                 val json = http.get(url)
                 if (json.number("backoff") > 0) http.postpone(baseUrl.host, json.number("backoff").toLong())
-                if (json.number("error_id") != 0) throw SourceException(SourceStatus.RATE_LIMITED, "Stack Exchange verlangt eine Pause oder hat die Anfrage abgelehnt.")
+                if (json.number("error_id") != 0) throw SourceException(SourceStatus.RATE_LIMITED, SearchMessage(MessageKey.STACK_PAUSE))
                 json.requireRows("items")
                 Result.success(json)
             } catch (cancelled: CancellationException) { throw cancelled }
@@ -49,8 +49,11 @@ class ForumsProvider(
         val next = if (successes.any { it.flag("has_more") }) SearchCursor((page + 1).toString(), (cursor?.offset ?: 0) + 45) else null
         val limited = responses.count { it.isFailure }
         val quota = successes.minOf { it.number("quota_remaining") }
-        SourcePage(items, next, "Stack Overflow · Super User · Server Fault. " +
-            (if (limited > 0) "$limited Foren nicht erreichbar. " else "") +
-            (if (successes.any { it.number("backoff") > 0 }) "API-Pause vor nächster Seite. " else "") + "API-Restkontingent: $quota.")
+        SourcePage(items, next, buildList {
+            add(SearchMessage(MessageKey.FORUMS_NOTE))
+            if (limited > 0) add(SearchMessage(MessageKey.FORUMS_UNAVAILABLE, limited.toString()))
+            if (successes.any { it.number("backoff") > 0 }) add(SearchMessage(MessageKey.FORUMS_PAUSE))
+            add(SearchMessage(MessageKey.FORUMS_QUOTA, quota.toString()))
+        })
     }
 }

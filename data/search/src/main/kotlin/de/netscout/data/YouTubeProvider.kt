@@ -12,7 +12,7 @@ class YouTubeProvider(
     override val source = SearchSource.YOUTUBE
     override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
         val query = request.keywordQuery
-        if (apiKey.isBlank()) throw SourceException(SourceStatus.SETUP_REQUIRED, "YouTube-API-Key oder SearXNG in Zugänge einrichten.")
+        if (apiKey.isBlank()) throw SourceException(SourceStatus.SETUP_REQUIRED, SearchMessage(MessageKey.YOUTUBE_SETUP))
         val url = baseUrl.newBuilder().addPathSegment("search").addQueryParameter("part", "snippet")
             .addQueryParameter("type", "video").addQueryParameter("q", query.remoteQuery)
             .addQueryParameter("maxResults", "25").addQueryParameter("order", if (request.sort == SortOrder.NEWEST) "date" else "relevance")

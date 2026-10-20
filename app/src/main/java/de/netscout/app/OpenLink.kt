@@ -8,5 +8,5 @@ import android.widget.Toast
 
 internal fun openUrl(context: Context, url: String) {
     try { context.startActivity(Intent(Intent.ACTION_VIEW, Uri.parse(url))) }
-    catch (_: ActivityNotFoundException) { Toast.makeText(context, "Keine App zum Öffnen des Links gefunden.", Toast.LENGTH_SHORT).show() }
+    catch (_: ActivityNotFoundException) { Toast.makeText(context, R.string.no_browser, Toast.LENGTH_SHORT).show() }
 }

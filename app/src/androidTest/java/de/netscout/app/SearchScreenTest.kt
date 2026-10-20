@@ -13,7 +13,7 @@ import org.junit.runner.RunWith
 @RunWith(AndroidJUnit4::class)
 class SearchScreenTest {
     @get:Rule val compose = createComposeRule()
-    private fun launch(queries: CompletableDeferred<Unit>? = null, assessment: CompletableDeferred<Unit>? = null, warning: String? = null, unavailableSource: SearchSource? = null) {
+    private fun launch(queries: CompletableDeferred<Unit>? = null, assessment: CompletableDeferred<Unit>? = null, warning: SearchMessage? = null, unavailableSource: SearchSource? = null) {
         val model = SearchViewModel(object : SettingsStore {
             override fun load() = SettingsRead(warning = warning)
             override fun save(settings: de.netscout.data.ApiSettings) = Unit
@@ -21,7 +21,7 @@ class SearchScreenTest {
             SearchEngine(SearchSource.entries.map { source -> object : SearchProvider {
                 override val source = source
                 override suspend fun search(request: SearchRequest, cursor: SearchCursor?): SourcePage {
-                    if (source == unavailableSource) throw SourceException(SourceStatus.RATE_LIMITED, "Suchdienst verlangt eine Pause.")
+                    if (source == unavailableSource) throw SourceException(SourceStatus.RATE_LIMITED, SearchMessage(MessageKey.SOURCE_PAUSE_SEARCH))
                     if (source != SearchSource.GITHUB) queries?.await()
                     return SourcePage(
                     if (source != SearchSource.GITHUB) emptyList()
@@ -41,14 +41,14 @@ class SearchScreenTest {
             override suspend fun load() = emptyList<Favorite>()
             override suspend fun save(favorites: List<Favorite>) = Unit
         }))
-        compose.setContent { NetScoutTheme { NetScoutApp(model, favorites) } }
+        compose.setContent { NetScoutTheme { NetScoutApp(model, favorites, GermanTestLanguage) } }
     }
 
     @Test fun blockedPublicSearchOffersTheSameKeywordsInTheBrowserWithoutRequestingAKey() {
         launch(unavailableSource = SearchSource.WEB)
         compose.onNodeWithText("Keywords").performTextInput("kotlin")
         compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
-        compose.onNodeWithText("Suchdienst verlangt eine Pause.").assertIsDisplayed()
+        compose.onNodeWithText("Quelle verlangt eine Pause. Bitte später erneut suchen.").assertIsDisplayed()
         compose.onNodeWithText("Keywords im Browser suchen").assertIsDisplayed().assertHasClickAction()
         compose.onNodeWithText("Zugang nötig").assertDoesNotExist()
     }
@@ -56,9 +56,9 @@ class SearchScreenTest {
     @Test fun everySelectedSourceShowsItsCurrentSearchPhase() = assertVisibleSourceProgress()
 
     @Test fun sourceProgressIsVisibleWithASettingsWarning() =
-        assertVisibleSourceProgress("Gespeicherte Zugänge konnten nicht gelesen werden. Bitte neu eingeben.")
+        assertVisibleSourceProgress(SearchMessage(MessageKey.ACCESS_LOAD_FAILED))
 
-    private fun assertVisibleSourceProgress(warning: String? = null) {
+    private fun assertVisibleSourceProgress(warning: SearchMessage? = null) {
         val queries = CompletableDeferred<Unit>()
         val assessment = CompletableDeferred<Unit>()
         launch(queries, assessment, warning)

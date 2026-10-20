@@ -6,6 +6,30 @@ import org.junit.Test
 import java.time.Instant
 
 class FavoritesCodecTest {
+    @Test fun `saved source metadata retains message keys across a restart`() {
+        val saved = favorite(1).let { it.copy(item = it.item.copy(
+            context = "Brave · öffentlicher Suchindex · example.org",
+            contextMessage = SearchMessage(MessageKey.PUBLIC_CONTEXT, "Brave", "example.org"),
+        )) }
+        assertEquals(listOf(saved), FavoritesCodec.decode(FavoritesCodec.encode(listOf(saved))))
+    }
+
+    @Test fun `old favorites remain readable and only recognized source metadata gains a translation key`() {
+        val saved = favorite(1).let { it.copy(item = it.item.copy(context = "Hacker News · 42 Punkte")) }
+        val loaded = FavoritesCodec.decode(FavoritesCodec.encode(listOf(saved))).single()
+        assertEquals(saved.item.title, loaded.item.title)
+        assertEquals(saved.item.snippet, loaded.item.snippet)
+        assertEquals(SearchMessage(MessageKey.HN_CONTEXT, "42"), loaded.item.contextMessage)
+        assertEquals("Hacker News · 42 Punkte", loaded.item.context)
+    }
+
+    @Test fun `malformed metadata messages are rejected before they reach the interface`() {
+        val malformed = favorite(1).let { it.copy(item = it.item.copy(
+            contextMessage = SearchMessage(MessageKey.PUBLIC_CONTEXT, "missing host"),
+        )) }
+        assertRejected(FavoritesCodec.encode(listOf(malformed)))
+    }
+
     @Test fun `snapshot round trip retains the displayed passage attribution date sources and original query`() {
         val passage = "Kotlin für Android – 日本語, \"Zitat\"\nZweite Zeile."
         val item = SearchItem("provider-id", SearchSource.FORUMS, "Ein Titel ⭐", "https://example.org/?id=42&lang=de",

@@ -28,7 +28,7 @@ class SearchEngine(
         onProgress: (SourceProgress) -> Unit = {},
     ): Flow<SourceOutcome> = channelFlow {
         val request = input.normalized()
-        require(request.validationError() == null) { request.validationError().orEmpty() }
+        require(request.validationError() == null) { request.validationError()?.text.orEmpty() }
         cursors.filterKeys { it in request.sources }.forEach { (source, cursor) ->
             launch {
                 // Expanding the selection must not spend quota again on unchanged source queries.
@@ -40,20 +40,20 @@ class SearchEngine(
                 }
                 val outcome = try {
                     onProgress(SourceProgress(source, SourcePhase.FETCHING))
-                    val provider = providers[source] ?: throw SourceException(SourceStatus.SETUP_REQUIRED, "Quelle noch nicht eingerichtet.")
+                    val provider = providers[source] ?: throw SourceException(SourceStatus.SETUP_REQUIRED, SearchMessage(MessageKey.SOURCE_SETUP))
                     val page = withTimeout(timeoutMillis) { provider.search(request, cursor) }
                     onProgress(SourceProgress(source, SourcePhase.ASSESSING, page.items.size))
                     // Model loading/inference has its own budget and remains cancellable.
                     SourceOutcome(source, SourceStatus.SUCCESS, withTimeout(60_000) { relevance.assess(request, page) })
                 } catch (_: TimeoutCancellationException) {
-                    SourceOutcome(source, SourceStatus.ERROR, message = "Zeitlimit erreicht. Bitte erneut versuchen.")
+                    SourceOutcome(source, SourceStatus.ERROR, message = SearchMessage(MessageKey.SOURCE_TIMEOUT))
                 } catch (cancelled: CancellationException) {
                     throw cancelled
                 } catch (failure: SourceException) {
-                    SourceOutcome(source, failure.status, message = failure.message)
+                    SourceOutcome(source, failure.status, message = failure.userMessage)
                 } catch (_: Exception) {
                     // Never expose URLs, credentials, response bodies, or internal exception messages.
-                    SourceOutcome(source, SourceStatus.ERROR, message = "Quelle zurzeit nicht erreichbar. Verbindung und Zugang prüfen.")
+                    SourceOutcome(source, SourceStatus.ERROR, message = SearchMessage(MessageKey.SOURCE_UNAVAILABLE))
                 }
                 if (outcome.status == SourceStatus.SUCCESS) synchronized(cache) {
                     cache[key] = Cached(nowMillis(), outcome)

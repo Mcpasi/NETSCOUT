@@ -48,7 +48,7 @@ class FavoritesScreenTest {
         }
         searchModel.value = model(index)
         favoritesModel.value = FavoritesViewModel(FavoritesRepository(store()))
-        compose.setContent { NetScoutTheme { NetScoutApp(searchModel.value!!, favoritesModel.value!!) } }
+        compose.setContent { NetScoutTheme { NetScoutApp(searchModel.value!!, favoritesModel.value!!, GermanTestLanguage) } }
         waitForFavorites(saved)
     }
 

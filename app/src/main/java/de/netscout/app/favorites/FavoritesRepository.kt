@@ -1,5 +1,7 @@
 package de.netscout.app.favorites
 
+import de.netscout.core.MessageKey
+import de.netscout.core.SearchMessage
 import de.netscout.core.ResultMerger
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -17,7 +19,7 @@ data class FavoritesState(
     val entries: List<Favorite> = emptyList(),
     val isLoading: Boolean = true,
     val isLoaded: Boolean = false,
-    val error: String? = null,
+    val error: SearchMessage? = null,
 )
 
 /** Serializes mutations and only publishes changes after they have reached durable storage. */
@@ -37,7 +39,7 @@ class FavoritesRepository(private val store: FavoritesStore) {
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            mutableState.update { it.copy(isLoading = false, error = "Favoriten konnten nicht geladen werden. Bitte erneut versuchen.") }
+            mutableState.update { it.copy(isLoading = false, error = SearchMessage(MessageKey.FAVORITES_LOAD_FAILED)) }
         }
     }
 
@@ -47,7 +49,7 @@ class FavoritesRepository(private val store: FavoritesStore) {
         if (!current.isLoaded) return@withLock
         val exists = current.entries.any { it.id == favorite.id }
         if (!exists && current.entries.size >= MAX_FAVORITES) {
-            mutableState.update { it.copy(error = "Du kannst höchstens $MAX_FAVORITES Favoriten speichern. Entferne zuerst einen Favoriten.") }
+            mutableState.update { it.copy(error = SearchMessage(MessageKey.FAVORITES_LIMIT, MAX_FAVORITES.toString())) }
             return@withLock
         }
         if (!ResultMerger.safeWebUrl(favorite.item.url)) return@withLock
@@ -69,7 +71,7 @@ class FavoritesRepository(private val store: FavoritesStore) {
         } catch (cancelled: CancellationException) {
             throw cancelled
         } catch (_: Exception) {
-            mutableState.update { it.copy(error = "Favoriten konnten nicht gespeichert werden. Bitte erneut versuchen.") }
+            mutableState.update { it.copy(error = SearchMessage(MessageKey.FAVORITES_SAVE_FAILED)) }
         }
     }
 }

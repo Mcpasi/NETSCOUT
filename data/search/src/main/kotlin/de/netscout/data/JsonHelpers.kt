@@ -1,5 +1,7 @@
 package de.netscout.data
 
+import de.netscout.core.MessageKey
+import de.netscout.core.SearchMessage
 import de.netscout.core.SourceException
 import de.netscout.core.SourceStatus
 import kotlinx.serialization.json.JsonArray
@@ -26,7 +28,7 @@ internal fun JsonObject.rows(key: String) = (get(key) as? JsonArray)?.mapNotNull
 internal fun JsonObject.requireRows(key: String): List<JsonObject> {
     val rows = get(key) as? JsonArray
     // Dropping malformed elements would turn a broken response into a successful empty page.
-    if (rows == null || rows.any { it !is JsonObject }) throw SourceException(SourceStatus.ERROR, "Quelle liefert keine gültige Trefferliste.")
+    if (rows == null || rows.any { it !is JsonObject }) throw SourceException(SourceStatus.ERROR, SearchMessage(MessageKey.SOURCE_INVALID_LIST))
     return rows.map { it as JsonObject }
 }
 internal fun JsonObject.array(key: String) = get(key) as? JsonArray ?: JsonArray(emptyList())
