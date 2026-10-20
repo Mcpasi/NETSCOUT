@@ -1,6 +1,8 @@
 # NetScout für Android
 
-Ein erster nativer Kotlin-/Jetpack-Compose-Prototyp für eine quellenübergreifende Keyword-Suche. Android 8.0+ (API 26), deutsche Oberfläche, keine Anmeldung bei NetScout und kein eigener Backend-Dienst nötig.
+Eine native Kotlin-/Jetpack-Compose-App für eine quellenübergreifende Keyword-Suche. Android 8.0+ (API 26), deutsche Oberfläche, keine Anmeldung bei NetScout und kein eigener Backend-Dienst nötig.
+
+Copyright **2026 Mcpasi**. Der eigene Code, die Dokumentation und das Artwork stehen unter [Apache-2.0](LICENSE). Hinweise zu fremden Komponenten: [NOTICE](NOTICE) und [third-party/README.md](third-party/README.md).
 
 - Keywords, optionale Von-/Bis-Daten und sechs auswählbare Quellen.
 - Alle sechs Quellen ohne Schlüssel nutzbar. Websuche ist vorausgewählt; Reddit und YouTube nutzen ohne eigene Zugänge den öffentlichen Suchindex.
@@ -14,13 +16,13 @@ Ein erster nativer Kotlin-/Jetpack-Compose-Prototyp für eine quellenübergreife
 
 ## APK testen
 
-Im Repository unter **[Actions → Android tests & debug APK](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml)** einen Lauf öffnen und unter **Artifacts** `netscout-debug-<Laufnummer>` herunterladen. Das ZIP enthält `netscout-debug.apk`, deren SHA-256 und den Zertifikats-Fingerabdruck. APK auf Android installieren und bei späteren Läufen über die bestehende Version aktualisieren.
+Im Repository unter **[Actions → Android tests & APKs](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml)** einen Lauf öffnen und unter **Artifacts** `netscout-debug-<Laufnummer>` herunterladen. Das ZIP enthält `netscout-debug.apk`, deren SHA-256 und den Zertifikats-Fingerabdruck. APK auf Android installieren und bei späteren Läufen über die bestehende Version aktualisieren.
 
 Alle Debug-Builds verwenden den eingecheckten [Entwicklungsschlüssel](debug-signing/README.md). Er darf nicht rotiert werden, solange die Testinstallation aktualisierbar bleiben soll. Android benötigt zusätzlich einen mindestens gleich hohen Versionscode. Für CI steigt dieser mit jeder neuen Workflow-Ausführung.
 
 ## Welche Daten sind sofort verfügbar?
 
-| Quelle | Zugriff im Prototyp | Grenzen |
+| Quelle | Zugriff in NetScout | Grenzen |
 | --- | --- | --- |
 | Web | Öffentliche Brave-Suche, DuckDuckGo als zweiter Dienst; ohne Einrichtung | Titel und Index-Textstellen, kein Volltextcrawl. Keine eigenen Tages-/Monatskontingente. Verfügbarkeit, Sperren und Seitentiefe bestimmt der Suchdienst. |
 | Reddit | Öffentliche Indexsuche nach Diskussionen, ohne Token | Indexierte Beiträge statt vollständiger Reddit-API. Reddit selbst blockiert anonyme API-Abfragen. Genehmigter OAuth-Zugang bleibt optional. |
@@ -73,6 +75,37 @@ GitHub Actions führt Unit-Tests einschließlich echter Modellinferenz und Token
 
 Nach den Emulator-Tests wird außerdem die tatsächliche APK installiert und über ihre Launcher-Activity gestartet. Eine Bildschirmaufnahme dieses Startchecks liegt im Artefakt `android-ui-tests`.
 
+### Release und F-Droid
+
+Der zusätzliche CI-Job **F-Droid source scan & unsigned release APK** führt das
+[F-Droid-Baurezept](fdroid/metadata/de.netscout.app.yml) mit `fdroid build` aus.
+Dabei entfernt F-Droid selbst den Gradle-Wrapper und die Debug-Signierkonfiguration
+und prüft Quellen sowie APK auf bekannte unfreie Komponenten. Die Modellgewichte
+werden in `prebuild` geladen und per Größe/SHA-256 geprüft. Der eigentliche
+Gradle-Build arbeitet für diese Assets zwingend offline. GitHub-Umgebungsvariablen,
+Tokens oder Signierschlüssel werden dafür nicht benötigt.
+
+Das Artefakt `netscout-fdroid-release-<Laufnummer>` enthält eine **unsignierte**
+Release-APK samt SHA-256. F-Droid übernimmt die Produktionssignatur. Die
+Release-Version ist fest im Quellcode definiert (aktuell 0.3.5, Versionscode 6);
+`netscout.versionCode` verändert ausschließlich Debug-Builds.
+
+```sh
+python3 scripts/prepare-relevance-model.py --download-only --cache-dir .model-cache
+./gradlew :app:lintRelease :app:assembleRelease \
+  -Pnetscout.modelCache=.model-cache -Pnetscout.offlineModel=true
+python3 scripts/verify-release-apk.py app/build/outputs/apk/release/app-release-unsigned.apk
+```
+
+Die bestehende Debug-Installation und eine von F-Droid signierte Installation
+haben unterschiedliche Zertifikate. Ein Wechsel erfordert eine Deinstallation,
+die lokale Favoriten und Zugänge löscht. Die Debug-Signatur bleibt für Updates
+innerhalb der bisherigen Testinstallationen unverändert.
+
+Abgleich mit den Aufnahmebedingungen, vollständiger Testaufruf und Schritte zur
+Einreichung: [fdroid/README.md](fdroid/README.md). Die Vorbereitung und ein
+erfolgreicher Build bedeuten noch keine Aufnahme in das offizielle Repository.
+
 Ein optionaler Integrationstest prüft alle sechs Quellen ohne Zugangsdaten durch dasselbe lokale Modell und gibt Abfragephasen, Diensthinweise, Kandidatenzahlen und bestätigte Treffer aus. Er nutzt öffentliche Dienste und läuft deshalb nicht automatisch in CI:
 
 ```sh
@@ -82,6 +115,8 @@ Ein optionaler Integrationstest prüft alle sechs Quellen ohne Zugangsdaten durc
 ```
 
 Reproduktion der vor der Korrektur nachgewiesenen Suchfehler: [docs/search-regressions.md](docs/search-regressions.md).
+
+Version **0.3.5** ergänzt das F-Droid-Baurezept, Release-Prüfungen in GitHub CI, freie Projektlizenz und Store-Metadaten. Modellvorbereitung und eigentlicher Build sind getrennt; Release-Versionscodes bleiben unabhängig von CI-Laufnummern.
 
 Version **0.3.4** ergänzt dauerhafte lokale Favoriten mit einem Limit von 20, einer eigenen Ansicht und Löschfunktion. JVM-Tests prüfen Speicherung, Neustart, URL-Identität, gleichzeitige Änderungen, das Limit und Fehlerfälle; Android-Tests prüfen den Dateispeicher und die Bedienung der Sterne samt Favoritenansicht.
 

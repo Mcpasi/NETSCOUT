@@ -1,4 +1,4 @@
-# Architektur des Prototyps
+# Architektur von NetScout
 
 ## Verantwortlichkeiten
 

@@ -1,0 +1,14 @@
+NetScout durchsucht Web, GitHub, Hacker News, Foren, Reddit und YouTube in einer nativen Android-Oberfläche. Alle sechs Quellen sind ohne eigene API-Schlüssel nutzbar. Optional lassen sich eigene Zugänge oder eine SearXNG-Instanz ergänzen. Die Oberfläche ist deutsch.
+
+• Keywords und genaue Phrasen, optionale Datumsgrenzen und Quellenauswahl
+• Gemeinsame Trefferliste mit Original-Links und Quellenstatus
+• Relevanzbewertung durch ein mitgeliefertes mehrsprachiges Modell auf dem Gerät
+• Sortierung nach Relevanz oder bekannten Veröffentlichungsdaten
+• Bis zu 20 Favoriten dauerhaft lokal speichern, offline lesen und entfernen
+• Keine Werbung, keine Telemetrie und kein NetScout-Konto
+
+Suchbegriffe werden an die ausgewählten Dienste oder deren öffentlichen Suchindex gesendet. Mehrere dieser Dienste sind proprietär; ihre Verfügbarkeit, Indexabdeckung und Kontingente begrenzen die Suche. Reddit und YouTube verwenden ohne eigene Zugänge den Suchindex. Ein eigener SearXNG-Dienst kann optional eingerichtet werden.
+
+Das lokale Modell benötigt keinen Download nach der Installation und keinen KI-Dienst. Es vergrößert die APK und braucht zusätzliche Rechenzeit. Bewertungen können falsch sein. Treffer ohne bekanntes Veröffentlichungsdatum werden bei aktivem Datumsfilter ausgeschlossen.
+
+Favoriten bleiben ohne Cloud-Synchronisierung im privaten App-Speicher. Optionale Zugangsdaten werden mit dem Android-Keystore verschlüsselt. Android 8.0 oder neuer erforderlich.

@@ -10,8 +10,8 @@ android {
         applicationId = "de.netscout.app"
         minSdk = 26
         targetSdk = 35
-        versionCode = providers.gradleProperty("netscout.versionCode").orNull?.toInt() ?: 5
-        versionName = "0.3.4"
+        versionCode = 6
+        versionName = "0.3.5"
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }
     signingConfigs {
@@ -23,7 +23,13 @@ android {
         }
     }
     buildTypes {
-        debug { signingConfig = signingConfigs.getByName("debug") }
+        debug {
+            signingConfig = signingConfigs.getByName("debug")
+        }
+        release {
+            isDebuggable = false
+            // F-Droid signs the unsigned APK with its own release key.
+        }
     }
     compileOptions {
         sourceCompatibility = JavaVersion.VERSION_17
@@ -39,6 +45,15 @@ android {
     sourceSets["main"].assets.srcDir(project(":data:relevance").layout.buildDirectory.dir("model"))
     testOptions { animationsDisabled = true }
     lint { abortOnError = true; checkDependencies = true }
+}
+// Only development builds may use a CI run number. Release metadata stays literal
+// so fdroid checkupdates and independent builds see the same versionCode.
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        providers.gradleProperty("netscout.versionCode").orNull?.toInt()?.let { code ->
+            variant.outputs.forEach { it.versionCode.set(code) }
+        }
+    }
 }
 dependencies {
     implementation(project(":core:search"))

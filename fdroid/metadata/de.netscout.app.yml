@@ -1,0 +1,46 @@
+AntiFeatures:
+  NonFreeNet:
+    en-US: Searches proprietary services including Brave, DuckDuckGo, GitHub, Reddit
+      and YouTube. A custom SearXNG instance is optional.
+Categories:
+  - Internet
+License: Apache-2.0
+AuthorName: Mcpasi
+SourceCode: https://github.com/Mcpasi/NETSCOUT
+IssueTracker: https://github.com/Mcpasi/NETSCOUT/issues
+Changelog: https://github.com/Mcpasi/NETSCOUT/releases
+
+AutoName: NetScout
+
+RepoType: git
+Repo: https://github.com/Mcpasi/NETSCOUT.git
+
+Builds:
+  - versionName: 0.3.5
+    versionCode: 6
+    commit: v0.3.5
+    subdir: app
+    sudo:
+      - apt-get update
+      - apt-get install -y openjdk-17-jdk-headless python3
+      - update-alternatives --auto java
+    gradle:
+      - yes
+    rm:
+      - debug-signing/netscout-debug.jks
+    prebuild: python3 ../scripts/prepare-relevance-model.py --download-only --cache-dir
+      ../.model-cache
+    scanignore:
+      # Apache-2.0 model weights, not executable code. Size and SHA-256 are
+      # checked in both prebuild and the offline Gradle asset preparation.
+      - .model-cache/1825907d6c1a9001ff78124780bbde20a614a8c3df3b63409cf3c72c6fe5c8b4
+    preassemble:
+      - lintRelease
+    gradleprops:
+      - netscout.modelCache=.model-cache
+      - netscout.offlineModel=true
+
+AutoUpdateMode: Version
+UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
+CurrentVersion: 0.3.5
+CurrentVersionCode: 6

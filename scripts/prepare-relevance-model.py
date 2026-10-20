@@ -22,15 +22,20 @@ def verified(path, entry):
         return hashlib.file_digest(stream, "sha256").hexdigest() == entry["sha256"]
 
 
-def prepare(output):
+def prepare(output=None, *, cache=None, offline=False):
     lock = json.loads((ROOT / "relevance-model.lock.json").read_text())
-    cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "netscout-models"
+    if cache is None:
+        cache = Path(os.environ.get("XDG_CACHE_HOME", Path.home() / ".cache")) / "netscout-models"
     cache.mkdir(parents=True, exist_ok=True)
-    output.mkdir(parents=True, exist_ok=True)
     paths = {}
     for name, entry in lock["files"].items():
         path = cache / entry["sha256"]
         if not verified(path, entry):
+            if offline:
+                raise SystemExit(
+                    f"Missing or invalid pinned asset: {name}. "
+                    f"Run {Path(__file__).name} --download-only --cache-dir {cache} first."
+                )
             url = f'https://huggingface.co/{lock["repository"]}/resolve/{lock["revision"]}/{entry["path"]}'
             for attempt in range(3):
                 temporary = None
@@ -56,6 +61,10 @@ def prepare(output):
                     if temporary:
                         temporary.unlink(missing_ok=True)
         paths[name] = path
+    if output is None:
+        print("Pinned model downloads verified; ready for an offline model build.")
+        return
+    output.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(paths["model.onnx"], output / "model.onnx")
     # Compact streaming format avoids a large JSON object graph on Android.
     tokenizer = json.loads(paths["tokenizer.json"].read_text())
@@ -75,10 +84,18 @@ def prepare(output):
     shutil.copyfile(ROOT / "docs/relevance-model.md", output / "MODEL.md")
     shutil.copyfile(ROOT / "third-party/APACHE-2.0.txt", output / "LICENSE.txt")
     shutil.copyfile(ROOT / "third-party/ONNX-RUNTIME-LICENSE.txt", output / "ONNX-RUNTIME-LICENSE.txt")
+    shutil.copyfile(ROOT / "third-party/ONNX-RUNTIME-ThirdPartyNotices.txt", output / "ONNX-RUNTIME-ThirdPartyNotices.txt")
+    shutil.copyfile(ROOT / "LICENSE", output / "NETSCOUT-LICENSE.txt")
+    shutil.copyfile(ROOT / "NOTICE", output / "NETSCOUT-NOTICE.txt")
     print("Verified multilingual relevance model and tokenizer prepared.")
 
 
 if __name__ == "__main__":
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("--output", type=Path, required=True)
-    prepare(parser.parse_args().output)
+    mode = parser.add_mutually_exclusive_group(required=True)
+    mode.add_argument("--output", type=Path)
+    mode.add_argument("--download-only", action="store_true", help="Fetch and verify inputs without generating assets")
+    parser.add_argument("--cache-dir", type=Path, help="Directory for SHA-256-addressed input files")
+    parser.add_argument("--offline", action="store_true", help="Fail instead of downloading missing or invalid inputs")
+    args = parser.parse_args()
+    prepare(args.output, cache=args.cache_dir, offline=args.offline)

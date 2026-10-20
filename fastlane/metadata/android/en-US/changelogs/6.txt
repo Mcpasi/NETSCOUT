@@ -1,0 +1,1 @@
+F-Droid build with a stable release version, unsigned APK and verified model assets without downloads during the build. Apache-2.0 license, Copyright 2026 Mcpasi. Search and local favorites are preserved.

@@ -1,0 +1,14 @@
+NetScout searches the web, GitHub, Hacker News, forums, Reddit and YouTube from a native Android app. All six sources work without your own API keys. You can optionally configure existing credentials or a custom SearXNG instance. The user interface is in German.
+
+• Keywords and exact phrases, optional date ranges and source selection
+• Combined results with original links and per-source status
+• On-device relevance ranking with a bundled multilingual model
+• Sort by relevance or known publication dates
+• Save up to 20 favorites locally, read them offline and remove them
+• No ads, telemetry or NetScout account
+
+Search terms are sent to the selected services or their public search index. Several services are proprietary; availability, index coverage and service limits affect searches. Reddit and YouTube use index search unless you supply your own credentials. A custom SearXNG service can be configured.
+
+The local model needs no download after installation and no remote AI service. It increases APK size and uses additional processing time. Its judgments can be wrong. Results without a known publication date are excluded when a date filter is active.
+
+Favorites stay in private app storage without cloud synchronization. Optional credentials are encrypted using Android Keystore. Requires Android 8.0 or newer.

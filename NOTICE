@@ -1,0 +1,16 @@
+NetScout
+Copyright 2026 Mcpasi
+
+NetScout's own source code, documentation and artwork are licensed under the
+Apache License, Version 2.0. See LICENSE.
+
+Third-party components retain their respective copyrights and licenses:
+- The bundled mmarco-mMiniLMv2-L12-H384-v1 model and tokenizer are distributed
+  under Apache-2.0. See relevance-model.lock.json and docs/relevance-model.md.
+- Microsoft ONNX Runtime is distributed under MIT. See
+  third-party/ONNX-RUNTIME-LICENSE.txt.
+- Kotlin, AndroidX, kotlinx.coroutines, kotlinx.serialization and OkHttp use
+  Apache-2.0; jsoup and commonmark-java use MIT.
+- The Gradle wrapper retains its original Apache-2.0 copyright notices.
+
+See third-party/README.md for source repositories and license references.

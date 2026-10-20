@@ -7,6 +7,8 @@ local.properties
 .DS_Store
 *.hprof
 captures/
+.model-cache/
+__pycache__/
 *.apk
 *.aab
 !debug-signing/netscout-debug.jks

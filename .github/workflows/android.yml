@@ -1,4 +1,4 @@
-name: Android tests & debug APK
+name: Android tests & APKs
 
 on:
   push:
@@ -13,6 +13,57 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  fdroid-release:
+    name: F-Droid source scan & unsigned release APK
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+      - uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+      - uses: android-actions/setup-android@v3
+        with:
+          cmdline-tools-version: '13114758'
+          packages: platform-tools
+          log-accepted-android-sdk-licenses: false
+      - uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.11.1'
+      - name: Install Android SDK and F-Droid tools
+        run: |
+          sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+          python3 -m pip install 'fdroidserver==2.4.5'
+      - name: Verify offline model preparation
+        run: python3 -m unittest discover -s scripts/tests -v
+      - name: Build using the F-Droid recipe
+        run: python3 scripts/check-fdroid-build.py --work-dir "$RUNNER_TEMP/netscout-fdroid"
+      - name: Verify unsigned release contents and version
+        run: python3 scripts/verify-release-apk.py "$RUNNER_TEMP/netscout-fdroid/unsigned/netscout-release-unsigned.apk"
+      - name: Prepare release download
+        run: |
+          mkdir -p release-artifacts
+          cp "$RUNNER_TEMP/netscout-fdroid/unsigned/netscout-release-unsigned.apk" release-artifacts/netscout-release-unsigned.apk
+          cd release-artifacts
+          sha256sum netscout-release-unsigned.apk > netscout-release-unsigned.apk.sha256
+      - uses: actions/upload-artifact@v4
+        with:
+          name: netscout-fdroid-release-${{ github.run_number }}
+          path: release-artifacts/
+          retention-days: 30
+          if-no-files-found: error
+      - name: Upload F-Droid build logs
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fdroid-build-logs
+          path: ${{ runner.temp }}/netscout-fdroid/logs/
+          retention-days: 14
+
   verify-and-debug:
     name: Unit tests, lint & signed debug APK
     runs-on: ubuntu-latest
