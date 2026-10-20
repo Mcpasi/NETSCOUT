@@ -1,32 +1,32 @@
-# Reproduzierte Suchfehler
+# Reproduced search failures
 
-Die zusätzliche Untersuchung für **0.3.1** mit vier Fehlerursachen, 13 vor der Korrektur fehlgeschlagenen Regressionstests und festen Vorher-/Nachher-Messungen steht in [search-quality-0.3.1.md](search-quality-0.3.1.md). Die folgenden Abschnitte beschreiben die frühere Untersuchung vom 18.10.2026.
+The additional investigation for **0.3.1**, covering four causes, 13 regression tests that failed before the fixes, and fixed before/after measurements, is in [search-quality-0.3.1.md](search-quality-0.3.1.md). The sections below describe the earlier investigation from 2026-10-18.
 
-Ausgangspunkt: `7685087a900d3ba53ff46b94b07ac07272d16797` (18.10.2026).
-Die folgenden Tests wurden zuerst ergänzt und gegen unveränderte Produktionsdateien ausgeführt. Erst nach ihrem Fehlschlag wurden die Korrekturen implementiert.
+Baseline: `7685087a900d3ba53ff46b94b07ac07272d16797` (2026-10-18).
+The following tests were added and run against unchanged production files first. Fixes were implemented only after the tests failed.
 
 ```sh
 ./gradlew :core:search:test
-# Vor der Korrektur: 38 Tests, 6 fehlgeschlagen.
+# Before the fix: 38 tests, 6 failures.
 ./gradlew :data:relevance:test --tests de.netscout.relevance.SemanticRelevanceTest
-# Vor der Korrektur: 4 Tests, 1 fehlgeschlagen.
+# Before the fix: 4 tests, 1 failure.
 ```
 
-| Reproduktion | Beobachtung vor der Korrektur | Korrektur |
+| Reproduction | Observation before the fix | Fix |
 | --- | --- | --- |
-| `Codex\u00a0mobile\u2003Android` mit kopierten Unicode-Leerzeichen | Die drei Wörter werden als ein einzelner Begriff behandelt; passende Titel fehlen. | Unicode-Leerzeichen werden vor Zerlegung und Request-Normalisierung vereinheitlicht. |
-| `"local\u00a0llm",Android`, Text `Local\u2003LLM for Android` | Die Phrase wird trotz gleichwertiger Leerzeichen nicht erkannt. | Phrasen akzeptieren Unicode-Leerzeichen auch im Originaltext. |
-| `Control Codex from a mobile client. It runs on Android.` | Kein einzelner Satz enthält alle drei Wörter; der gemeinsame Bezug wird nicht bewertet. | Zwei benachbarte Sätze innerhalb desselben Absatzes können einen Originalbeleg bilden. |
-| Ein langer Satz mit `Codex` und rund 560 Zeichen später `mobile Android` | Starre Fenster beginnen jeweils 200 Zeichen vor einem Vorkommen und schneiden andere benötigte Wörter ab, obwohl alle in 700 Zeichen passen. | Ein gleitendes vollständiges Trefferfenster richtet sich nach den tatsächlichen Begriffspositionen. |
-| Je 120 frühere, getrennte Vorkommen der drei Begriffe, danach eine vollständige Textstelle | Die auf 100 Vorkommen begrenzte Hervorhebung wird zur Suche verwendet; der späte Beleg fehlt. | Die Textstellensuche hat eigene Iteratoren über sämtliche Vorkommen; nur die Zahl gespeicherter Ausschnitte ist begrenzt. |
-| Passender Titel, generischer erster Absatz, aussagekräftiger späterer Absatz | Der frühe Rücksprung beim passenden Titel verdeckt den späteren Textbeleg. | Textbelege werden auch bei vollständig passendem Titel ausgewählt und nach Keyword-Abdeckung priorisiert. |
-| Zwei kurze vollständige Erwähnungen vor einer längeren, vom Scorer positiv bewerteten Erklärung | Die zwei kürzesten Stellen belegen beide Plätze; die Erklärung wird nie bewertet. | Bis zu vier Stellen werden geprüft, ohne die Auswahl nach der kürzesten Länge zu beschränken. |
+| `Codex\u00a0mobile\u2003Android` with pasted Unicode spaces | The three words are treated as one term; relevant titles are missed. | Normalize Unicode spaces before parsing and request normalization. |
+| `"local\u00a0llm",Android`, text `Local\u2003LLM for Android` | The phrase is not recognized despite equivalent whitespace. | Phrases accept Unicode whitespace in original text too. |
+| `Control Codex from a mobile client. It runs on Android.` | No single sentence contains all three words; their shared reference is not assessed. | Two neighboring sentences within the same paragraph can form original evidence. |
+| A long sentence with `Codex`, followed roughly 560 characters later by `mobile Android` | Fixed windows start 200 characters before each occurrence and cut off other required words, although all fit within 700 characters. | A sliding complete-match window follows actual term positions. |
+| 120 earlier separate occurrences of each term, followed by a complete passage | Highlighting capped at 100 occurrences is used for search; the later evidence is missed. | Passage search has its own iterators over all occurrences; only the number of stored excerpts is limited. |
+| Matching title, generic first paragraph, informative later paragraph | An early return for a matching title hides later body evidence. | Body passages are selected even with a fully matching title and prioritized by keyword coverage. |
+| Two short complete mentions before a longer explanation rated positively by the scorer | The two shortest passages fill both slots; the explanation is never assessed. | Assess up to four passages without restricting selection to the shortest length. |
 
-Die Beispiele verwenden die vorhandene Beispielanfrage und weitere beliebige Begriffe; die Implementierung enthält keine festgelegten Produktnamen.
+Examples use the existing sample query and other arbitrary terms; the implementation has no hard-coded product names.
 
-## Zusätzlicher Absatzfall aus dem Live-Vergleich
+## Additional paragraph case from live comparison
 
-Nach den ersten Korrekturen wurden bei HN mehrere passende Beiträge weiterhin vor der Modellprüfung verworfen: Die Projekteinleitung nennt den Agenten, ein späterer Plattformabsatz Android. Der neue Modelltest `real model retains a project introduction followed by its platform paragraph` schlug vor dieser weiteren Korrektur ebenfalls fehl. Seine reduzierte Reproduktion lautet:
+After the initial fixes, several relevant HN posts were still rejected before model assessment: the project introduction names the agent, while a later platform paragraph mentions Android. The new model test `real model retains a project introduction followed by its platform paragraph` also failed before this further fix. Its reduced reproduction is:
 
 ```text
 An open source interface for Codex and other coding agents.
@@ -34,24 +34,24 @@ An open source interface for Codex and other coding agents.
 The mobile app runs on iOS and Android.
 ```
 
-Die semantische Prüfung erhält jetzt bei fehlendem Satzbeleg vollständige Originalfenster bis 1.000 Zeichen und prüft die Verbindung der benötigten Abschnitte zusätzlich. Der gleiche Modelltest bestätigt einen Zusammenhang zwischen `rust`, `async` und `database` mit unmittelbarem Rückverweis. Unabhängige Release-Notes bleiben ausgeschlossen, obwohl ihr gemeinsamer Text ebenfalls einen hohen Anfrage-/Textstellenwert erhält. Ein weiterer, vor der Absicherung fehlgeschlagener Test verhindert, dass Rückverweise über einen zwischenliegenden Themenwechsel hinweg verwendet werden. Die Vorschau lässt sich vollständig aufklappen.
+When sentence-level evidence is absent, semantic assessment now receives complete original windows of up to 1,000 characters and additionally checks continuity between required sections. The same model test confirms a relationship between `rust`, `async`, and `database` with an immediate back-reference. Unrelated release notes remain excluded even when their combined text receives a high query/passage score. Another test, which failed before the safeguard, prevents back-references from skipping an intervening topic change. The preview can be fully expanded.
 
-## HN und Foren
+## HN and Forums
 
-Echte HTTP-Abfragen vor der Korrektur bestätigten erreichbare Endpunkte: Algolia lieferte für `Codex,mobile,android` sechs Story-Kandidaten. Stack Exchange lieferte Fragen für `kotlin,android` und keine Kandidaten für eine Kombination mit einem erfundenen zweiten Begriff. Ein genereller Nichtstart dieser Provider ließ sich damit nicht bestätigen.
+Real HTTP requests before the fixes confirmed reachable endpoints: Algolia returned six story candidates for `Codex,mobile,android`. Stack Exchange returned questions for `kotlin,android` and no candidates for a combination with an invented second term. A general failure of these providers to start could therefore not be confirmed.
 
-Die bisherige Engine lieferte ihren einzigen sichtbaren Quellenstatus erst nach der vollständigen Inhaltsprüfung. Eine abgeschlossene Seite blieb während der nächsten Seitenabfrage als Erfolg sichtbar. Jetzt werden Abfrage und Inhaltsprüfung separat angezeigt, einschließlich geladener Kandidaten und erfolgreicher leerer Antworten. Nach Suchstart wird zum Quellenstatus gescrollt. Ungeprüfte Kandidaten werden weiterhin nicht als Treffer ausgegeben.
+Previously, the engine provided its only visible source status after complete content assessment. A completed page remained visible as successful while the next page was being requested. Fetching and content assessment are now shown separately, including loaded candidates and successful empty responses. Starting a search scrolls to source status. Unchecked candidates are still never displayed as matches.
 
-Zusätzliche Tests prüfen den parallelen Start von GitHub, HN und Foren, laufende Prüfung ohne verfrühte Treffer, Pagination, Abbruch, Cache und Kandidaten-/Trefferzahlen. Ein echter Modelltest bestätigt den Zusammenhang über zwei Sätze. Bestehende Negativtests für fehlende Begriffe, getrennte Absätze und unabhängige Release-Note-Abschnitte bleiben erhalten. Der optionale Live-Check deckt jetzt alle drei öffentlichen Quellen ab:
+Additional tests cover parallel startup of GitHub, HN, and Forums, assessment in progress without premature matches, pagination, cancellation, caching, and candidate/match counts. A real model test confirms continuity across two sentences. Existing negative tests for missing terms, separate paragraphs, and unrelated release-note sections remain. The optional live check now covers all three public sources:
 
 ```sh
 ./gradlew :data:search:checkLiveSearch -PsearchKeywords=Codex,mobile,android
 ```
 
-## Abschlussprüfung
+## Final verification
 
-77 JVM-/ViewModel-Tests einschließlich echter Modellinferenz bestanden nach der Korrektur. Android Lint, Debug-APK, Android-Test-APK und Prüfung des permanenten Signaturzertifikats waren ebenfalls erfolgreich. Der letzte Live-Check am 18.10.2026 bestätigte erfolgreiche Antworten aller drei Quellen: GitHub 90 geladene/72 bestätigte Kandidaten, HN 6/3 und Foren 3/0. Diese Momentaufnahme ist kein Anspruch auf vollständige Plattformabdeckung. Oberflächenprüfungen decken die einzelnen Quellenphasen und Unicode-Eingaben zusätzlich auf dem Emulator ab.
+77 JVM/ViewModel tests, including real model inference, passed after the fixes. Android Lint, the debug APK, Android test APK, and permanent signing-certificate verification also passed. The final live check on 2026-10-18 confirmed successful responses from all three sources: GitHub 90 loaded/72 confirmed candidates, HN 6/3, and Forums 3/0. This snapshot does not establish complete platform coverage. UI checks additionally cover individual source phases and Unicode input on the emulator.
 
-Der erste CI-Emulatorlauf scheiterte bereits vor dem App-Teststart: `FATAL | Not enough space to create userdata partition. Available: 7026.18 MB ... need 7372.80 MB.` Der anschließend wiederholte `adb: device 'emulator-5554' not found` war damit reproduziert. Auch mit der unterstützten AVD-Einstellung `disk-size: 2048M` verlangte das gelieferte Systemimage im nächsten Lauf weiterhin 7372,80 MB. Der Workflow gibt deshalb vor dem Emulatorstart gezielt Speicherplatz durch Entfernen ungenutzter .NET-/CodeQL-Werkzeuge auf dem temporären CI-Rechner frei. Das Emulator-Startzeitlimit beträgt 180 statt 600 Sekunden.
+The first CI emulator run failed before app tests started: `FATAL | Not enough space to create userdata partition. Available: 7026.18 MB ... need 7372.80 MB.` The subsequent repeated `adb: device 'emulator-5554' not found` was thereby reproduced. Even with the supported AVD setting `disk-size: 2048M`, the supplied system image still requested 7372.80 MB on the next run. The workflow therefore frees space before emulator startup by removing unused .NET/CodeQL tools from the temporary CI machine. The emulator startup timeout is 180 rather than 600 seconds.
 
-Der nächste Lauf (`39172314571`, Commit `cc51302`) startete den Emulator erfolgreich und reproduzierte vor der Korrektur einen Oberflächenfehler: `everySelectedSourceShowsItsCurrentSearchPhase` scheiterte an `assertIsDisplayed()` für den HN-Abfragestatus. Das Scrollziel zählte die separate Überschrift nicht mit und sprang deshalb zum Eingabeformular statt zum Quellenstatus. Der Zielindex berücksichtigt jetzt Überschrift, Formular und optionalen Zugangshinweis. Die Oberflächenprüfung verlangt sichtbare Phasen aller drei Quellen ohne zusätzliches Scrollen und prüft auch die Variante mit Zugangshinweis.
+The next run (`39172314571`, commit `cc51302`) successfully started the emulator and reproduced a UI bug before its fix: `everySelectedSourceShowsItsCurrentSearchPhase` failed at `assertIsDisplayed()` for HN's fetching status. The scroll target did not count the separate heading, so it jumped to the input form rather than source status. The target index now accounts for the heading, form, and optional credential notice. The UI check requires visible phases for all three sources without additional scrolling and also checks the variant with the credential notice.

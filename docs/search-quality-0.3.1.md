@@ -1,52 +1,52 @@
-# Suchqualität 0.3.1
+# Search quality 0.3.1
 
-Untersuchung am 19.10.2026, Ausgangsstand `5ce6327a35702eceb8a23d67038763d8ae8edde9`.
-Alle unten aufgeführten Fehler wurden vor Änderungen am Produktionscode durch fehlgeschlagene Tests reproduziert. Die erste gezielte Ausführung enthielt **36 Tests, davon 13 fehlgeschlagen**. Die anschließende Messung nutzte dieselben unveränderten Eingaben vor und nach der Korrektur.
+Investigation on 2026-10-19, baseline `5ce6327a35702eceb8a23d67038763d8ae8edde9`.
+All failures below were reproduced through failing tests before production code was changed. The first targeted run included **36 tests, 13 failures**. Subsequent measurements used the same unchanged inputs before and after the fixes.
 
-## Reproduzierte Fehler und Korrekturen
+## Reproduced failures and fixes
 
-| Fehlerursache | Konkrete Reproduktion und beobachteter Fehler | Korrektur | Fehlgeschlagene Fälle vorher |
+| Cause | Concrete reproduction and observed failure | Fix | Previously failing cases |
 | --- | --- | --- | ---: |
-| Klartext und Markdown werden als HTML gelesen | GitHub-Issue/Reddit: `Use List<Widget> in Kotlin`, wobei der generische Ausdruck in Markdown-Code steht. Die HTML-Aufbereitung entfernt `<Widget>`. Dasselbe passiert bei der GitHub-Klartextbeschreibung `A Kotlin library for <Widget> collections.` Die Suche nach `Widget,kotlin` verliert passende Treffer schon vor der Modellbewertung. | GitHub-Beschreibungen bleiben Klartext; Issue-/PR- und Reddit-Texte werden zuerst als Markdown verarbeitet. CommonMark schützt literale Zeichen in Code vor der anschließenden HTML-Extraktion. Tatsächliches HTML wird weiterhin bereinigt; Absatzgrenzen bleiben erhalten. | 6 |
-| Reihenfolge wiederholter URL-Parameter geht verloren | `?sort=title&sort=date` und `?sort=date&sort=title` werden gleichgesetzt. Auch mehrfaches `filter` ist betroffen. Solche Parameter können eine geordnete Sortierung oder den ersten/letzten Filterwert bestimmen. Zwei unterschiedliche Treffer werden zu einem. | Unterschiedliche Parameternamen werden weiterhin sortiert; die Reihenfolge gleichnamiger Parameter bleibt erhalten. | 2 |
-| Nichtstandardports gehen verloren | `http://example.org:443/article` wird mit `https://example.org/article` zusammengelegt; entsprechend `https://example.org:80/article` mit `http://example.org/article`. Das sind unterschiedliche Endpunkte. | Nur der Standardport des jeweiligen Schemas wird entfernt: 80 bei HTTP, 443 bei HTTPS. | 2 |
-| Unlesbare Ergebniszeilen gelten als erfolgreiche leere Suche | Brave liefert Ergebniscontainer, deren Titelklasse oder Link nicht mehr lesbar ist. Vorher: Erfolg mit null Treffern und kein DuckDuckGo-Aufruf. Sind auch die Zeilen des letzten Dienstes unlesbar, erscheint ebenfalls ein falscher Erfolg. | Sind Ergebniszeilen vorhanden, aber keine lesbar, wird ein Quellenfehler ausgelöst. Dadurch greift der bestehende Ausweichweg; ein vollständig unlesbarer letzter Dienst meldet einen Fehler. Gültige leere Antworten und lesbare, wegen der Quelleneinschränkung ausgeschlossene Treffer bleiben erfolgreiche Antworten. | 3 |
+| Plain text and Markdown interpreted as HTML | GitHub issue/Reddit: `Use List<Widget> in Kotlin`, with the generic expression inside Markdown code. HTML preparation removes `<Widget>`. The same happens to the plain-text GitHub description `A Kotlin library for <Widget> collections.` Searching `Widget,kotlin` loses relevant results before model assessment. | GitHub descriptions stay plain text; issue/PR and Reddit bodies are processed as Markdown first. CommonMark protects literal code characters before HTML extraction. Actual HTML is still cleaned; paragraph boundaries remain. | 6 |
+| Repeated URL-parameter order lost | `?sort=title&sort=date` and `?sort=date&sort=title` are treated as equivalent. Repeated `filter` is also affected. Such parameters can define ordered sorting or first/last filter values. Two different results become one. | Different parameter names are still sorted; the order of parameters sharing a name is preserved. | 2 |
+| Non-default ports lost | `http://example.org:443/article` is merged with `https://example.org/article`; likewise `https://example.org:80/article` with `http://example.org/article`. These are different endpoints. | Remove only the default port for the respective scheme: 80 for HTTP, 443 for HTTPS. | 2 |
+| Unreadable result rows treated as a successful empty search | Brave returns result containers whose title class or link can no longer be read. Previously: success with zero results and no DuckDuckGo request. Unreadable rows from the final service also produce false success. | If rows exist but none are readable, report a source error. The existing fallback then runs; a completely unreadable final service reports an error. Valid empty responses and readable results excluded by source restrictions remain successful responses. | 3 |
 
-Die vier Ursachen werden durch `SourceTextRegressionTest`, `UrlIdentityRegressionTest` und `HtmlReliabilityRegressionTest` abgesichert. `SearchQualityModelTest` prüft zusätzlich alle 20 Textfälle mit dem echten lokalen Modell im normalen JVM-Testlauf.
+The four causes are covered by `SourceTextRegressionTest`, `UrlIdentityRegressionTest`, and `HtmlReliabilityRegressionTest`. `SearchQualityModelTest` additionally checks all 20 text cases with the real local model during the normal JVM test run.
 
-CommonMark ist auf die Android-kompatible Version 0.21.0 festgelegt. Neuere Versionen benötigen zusätzliche Java-APIs; 0.24.0 ruft unter anderem `List.of` und `Map.of` auf, die auf älteren unterstützten Android-Versionen fehlen. `SearchTextCompatibilityTest` führt den tatsächlichen GitHub-Provider samt Markdown-Code auf Android aus, mit HTTP-Antworten aus einem In-Memory-Interceptor.
+CommonMark is pinned to Android-compatible version 0.21.0. Newer versions require additional Java APIs; 0.24.0 calls `List.of` and `Map.of`, among others, which are absent on older supported Android versions. `SearchTextCompatibilityTest` runs the actual GitHub provider and Markdown code on Android with HTTP responses from an in-memory interceptor.
 
-## Messverfahren
+## Measurement method
 
-- **Textqualität:** 20 vorab beschriftete Provider-Fixtures, davon 14 relevante und 6 irrelevante Kandidaten. Eingaben laufen durch die tatsächlichen GitHub-, Reddit-, HN- oder YouTube-Adapter, `SemanticRelevance` mit dem festgelegten ONNX-Modell und `ResultMerger`. Gemessen wird die Entscheidung, ob ein Treffer angezeigt wird. Positive Kontrollen enthalten normalen Text, echtes HTML und korrekt maskierte Generics; negative Kontrollen enthalten fehlende Begriffe, Teilworttreffer und unverbundene Absätze.
-- **URL-Identität:** acht unabhängige Paare, davon vier gleichwertig und vier verschieden. Geprüft wird die Anzahl nach der tatsächlichen Deduplizierung. Tracking, Fragmente, unabhängige Parameterreihenfolge und korrekte Standardports dienen als Kontrollen.
-- **Zuverlässigkeit:** acht feste HTTP-Szenarien, je dreimal mit frischem Transport und ohne Engine-Cache. Ein Versuch gilt nur als korrekt, wenn Status, Trefferzahl und Zahl der Ausweichaufrufe stimmen. Explizit leere Antworten zählen als korrekt; ein unlesbares letztes Backend muss als Fehler sichtbar werden.
+- **Text quality:** 20 pre-labeled provider fixtures, with 14 relevant and 6 irrelevant candidates. Inputs pass through the actual GitHub, Reddit, HN, or YouTube adapters, `SemanticRelevance` with the pinned ONNX model, and `ResultMerger`. The measurement is the decision to display a match. Positive controls include ordinary text, actual HTML, and correctly escaped generics; negative controls include missing terms, substring matches, and unrelated paragraphs.
+- **URL identity:** eight independent pairs, four equivalent and four different. The count after actual deduplication is checked. Tracking, fragments, independent parameter order, and correct default ports serve as controls.
+- **Reliability:** eight fixed HTTP scenarios, each run three times with a fresh transport and no engine cache. A trial is correct only when status, result count, and fallback-call count all match. Explicit empty responses count as correct; an unreadable final backend must visibly report an error.
 
-Die HTTP-Antworten kommen ausschließlich von lokalem MockWebServer. Die Messung benötigt keine Suchzugänge und verbraucht keine Plattformkontingente. Modell und Tokenizer bleiben unverändert; es wurden weder ein Schwellwert noch die Labels an die Ergebnisse angepasst.
+HTTP responses come exclusively from local MockWebServer. Measurement needs no search credentials and consumes no platform quotas. Model and tokenizer remain unchanged; neither a threshold nor the labels were adjusted to fit results.
 
-| Kennzahl | Vorher | Nachher |
+| Metric | Before | After |
 | --- | ---: | ---: |
-| Text: richtige Entscheidungen / 20 | 14 / 20 | 20 / 20 |
-| Text: Genauigkeit `(TP + TN) / N` | 70,0 % | 100,0 % |
-| Text: Präzision `TP / (TP + FP)` | 100,0 % | 100,0 % |
-| Text: Recall `TP / (TP + FN)` | 57,1 % | 100,0 % |
-| Text: F1 `2TP / (2TP + FP + FN)` | 72,7 % | 100,0 % |
+| Text: correct decisions / 20 | 14 / 20 | 20 / 20 |
+| Text: accuracy `(TP + TN) / N` | 70.0% | 100.0% |
+| Text: precision `TP / (TP + FP)` | 100.0% | 100.0% |
+| Text: recall `TP / (TP + FN)` | 57.1% | 100.0% |
+| Text: F1 `2TP / (2TP + FP + FN)` | 72.7% | 100.0% |
 | Text: TP / FP / FN / TN | 8 / 0 / 6 / 6 | 14 / 0 / 0 / 6 |
-| URL-Identität: korrekte Paare / 8 | 4 / 8 (50,0 %) | 8 / 8 (100,0 %) |
-| URL-Treffer, Summe je Paar; erwartet 12 | 8 | 12 |
-| Zuverlässigkeit: korrekt behandelte Versuche / 24 | 15 / 24 (62,5 %) | 24 / 24 (100,0 %) |
+| URL identity: correct pairs / 8 | 4 / 8 (50.0%) | 8 / 8 (100.0%) |
+| URL results, sum per pair; expected 12 | 8 | 12 |
+| Reliability: correctly handled trials / 24 | 15 / 24 (62.5%) | 24 / 24 (100.0%) |
 
-Maschinenlesbare Ergebnisse einschließlich jeder einzelnen Entscheidung: [vorher](search-quality/0.3.1/before.json), [nachher](search-quality/0.3.1/after.json).
+Machine-readable results, including each decision: [before](search-quality/0.3.1/before.json), [after](search-quality/0.3.1/after.json).
 
-Das ist ein gezielter **Diagnostikkorpus**, keine repräsentative Stichprobe des Webs. Die Werte belegen die Korrektur dieser Fehlerfälle; sie schätzen weder globale Suchpräzision noch Verfügbarkeit öffentlicher Dienste. Dreimal dieselben Ausfallszenarien zu prüfen ist eine Wiederholbarkeitsprüfung, keine unabhängige Stichprobe. Die URL-Fälle prüfen die Identitätslogik separat vom neuronalen Ranking.
+This is a targeted **diagnostic corpus**, not a representative sample of the web. Values establish fixes for these failure cases; they estimate neither global search precision nor public-service availability. Repeating the same failure scenarios three times checks repeatability, not independent sampling. URL cases test identity logic separately from neural ranking.
 
-Festgelegte Eingaben:
+Fixed inputs:
 
-- Textkorpus: `data/search/src/test/resources/search-quality/text-cases.json`, SHA-256 `dda93c7718e43b97efaa3a74887ebb123017aeb79cd5330e80ea5fe4d1da05c6`.
-- URL-/HTTP-Fälle: `SearchQualityFixtures.kt`.
-- Unveränderte Modellsperrdatei: `relevance-model.lock.json`, SHA-256 `c1afd5df6c29d40f2a2f658b08937df6bcc81f235dbd73886473c465aa7cf4a9`.
+- Text corpus: `data/search/src/test/resources/search-quality/text-cases.json`, SHA-256 `dda93c7718e43b97efaa3a74887ebb123017aeb79cd5330e80ea5fe4d1da05c6`.
+- URL/HTTP cases: `SearchQualityFixtures.kt`.
+- Unchanged model lock file: `relevance-model.lock.json`, SHA-256 `c1afd5df6c29d40f2a2f658b08937df6bcc81f235dbd73886473c465aa7cf4a9`.
 
-## Wiederholen
+## Repeat the measurements
 
 ```sh
 ./gradlew :data:search:checkSearchQuality \
@@ -59,9 +59,9 @@ Festgelegte Eingaben:
   --tests de.netscout.data.HtmlReliabilityRegressionTest
 ```
 
-Der erste Befehl schreibt Messwerte, auch wenn der untersuchte Stand schlechtere Ergebnisse liefert. Der zweite verlangt die erwarteten Entscheidungen. Modell-/Bibliotheksdownloads beim ersten Build benötigen Netzwerkzugriff.
+The first command writes measurements even if the examined revision performs worse. The second requires the expected decisions. Model/library downloads on the first build need network access.
 
-Für die erneute Vorher-Messung bleiben Messprogramm und Fixtures auf dem Stand dieser Änderung; ausschließlich die fünf korrigierten Produktionsdateien werden in einer separaten Arbeitskopie zurückgesetzt:
+To repeat the before measurement, keep the measurement program and fixtures at this change's revision; restore only the five corrected production files in a separate worktree:
 
 ```sh
 git worktree add --detach ../NetScout-quality-before HEAD
@@ -79,19 +79,19 @@ cd ../NetScout-quality-before
   :data:search:checkSearchQuality \
   -PsearchQualityOutput=/tmp/netscout-before.json \
   -PsearchQualityLabel=5ce6327 --continue
-# Erwartet: 36 Tests, 13 fehlgeschlagen; Messdatei wird trotzdem geschrieben.
+# Expected: 36 tests, 13 failures; the measurement file is still written.
 ```
 
-## Version und Abschlussprüfung
+## Version and final verification
 
-Patch-Bump von **0.3.0 auf 0.3.1**, lokaler Standard-Versionscode von 1 auf 2. Die bestehende CI-Vergabe des Versionscodes und das permanente Debug-Signaturzertifikat bleiben erhalten.
+Version-number changes are recorded in the [changelog](../CHANGELOG.md#031).
 
-Die Abschlussprüfung mit CommonMark 0.21.0 bestätigte dieselben Messwerte und Modellwerte wie die erste Nachher-Messung. Lokal erfolgreich:
+Final verification with CommonMark 0.21.0 confirmed the same measurements and model scores as the first after measurement. Successfully checked locally for this release:
 
-- **126 JVM-/ViewModel-Tests**, keine Fehler oder übersprungenen Tests: Core 41, Suchadapter 66, Relevanz 10, App 9.
-- Android Lint: 0 Fehler, 27 Warnungen, überwiegend Hinweise auf neuere Bibliotheksversionen. Die Android-kompatible CommonMark-Version bleibt bewusst festgelegt.
-- Debug-APK und Android-Test-APK gebaut; Paketmetadaten der App bestätigen `versionName=0.3.1`, `versionCode=2`.
-- Permanentes Debug-Zertifikat mit `scripts/verify-debug-signature.py` geprüft: `a5d9e8eadeb82bc5f5bb35e9f74a945b879349defae394d548c22eab57a0f8ea`.
+- **126 JVM/ViewModel tests**, no failures or skipped tests: Core 41, search adapters 66, relevance 10, app 9.
+- Android Lint: 0 errors, 27 warnings, mainly notices about newer library versions. The Android-compatible CommonMark version remains deliberately pinned.
+- Debug APK and Android test APK built; app package metadata confirms `versionName=0.3.1`, `versionCode=2`.
+- Permanent debug certificate checked with `scripts/verify-debug-signature.py`: `a5d9e8eadeb82bc5f5bb35e9f74a945b879349defae394d548c22eab57a0f8ea`.
 
 ```sh
 ./gradlew :core:search:test :data:search:test :data:relevance:test \
@@ -100,4 +100,4 @@ Die Abschlussprüfung mit CommonMark 0.21.0 bestätigte dieselben Messwerte und 
 python3 scripts/verify-debug-signature.py app/build/outputs/apk/debug/app-debug.apk
 ```
 
-Die Android-Gerätetests sind zusätzlich Teil des bestehenden CI-Jobs auf API 29; lokal wurden die Test-APK gebaut und die JVM-Prüfungen ausgeführt.
+Android device tests are additionally part of the existing API 29 CI job; locally, the test APK was built and JVM checks were run.

@@ -1,57 +1,56 @@
-# F-Droid-Vorbereitung
+# F-Droid preparation
 
-Abgleich am 20.10.2026 mit der offiziellen
-[Inclusion Policy](https://f-droid.org/en/docs/Inclusion_Policy/), dem
+Reviewed on 2026-10-20 against the official
+[Inclusion Policy](https://f-droid.org/en/docs/Inclusion_Policy/),
 [Quick Start Guide](https://f-droid.org/en/docs/Submitting_to_F-Droid_Quick_Start_Guide/),
-der [Build-Metadatenreferenz](https://f-droid.org/en/docs/Build_Metadata_Reference/)
-und den [Anti-Features](https://f-droid.org/en/docs/Anti-Features/).
+[Build Metadata Reference](https://f-droid.org/en/docs/Build_Metadata_Reference/),
+and [Anti-Features](https://f-droid.org/en/docs/Anti-Features/).
 
-## Abgleich
+## Requirements mapping
 
-| Bedingung | Umsetzung / Grenze |
+| Requirement | Implementation / limitation |
 | --- | --- |
-| Öffentlich zugänglicher, vollständiger Quellcode | `https://github.com/Mcpasi/NETSCOUT`; muss für die Einreichung ohne Anmeldung klonbar sein |
-| Freie Projektlizenz | Apache-2.0, Copyright 2026 Mcpasi; `LICENSE` und `NOTICE`, auch in der APK |
-| Freie Bibliotheken / vertrauenswürdige Repositories | Maven Central, Google Maven und Gradle Plugin Portal; feste Versionen, kein Firebase/GMS/Tracking-SDK; siehe `third-party/README.md` |
-| Freie Toolchain | OpenJDK 17, Gradle 8.11.1, Python 3.11+, Android SDK 35 / Build-Tools 35.0.0; Android SDK und frei lizenzierte Maven-Artefakte fallen unter die dokumentierten Ausnahmen |
-| Vollständiger Build auf F-Droid | `metadata/de.netscout.app.yml`, `subdir: app`, `gradle: yes`; verwendet den von F-Droid bereitgestellten Gradle-Launcher |
-| Vorbereitung vor dem Build | `prebuild` lädt die zwei festen Modell-Inputs und prüft Größe/SHA-256; der Gradle-Task erzeugt daraus offline die Assets |
-| Keine verschleierten Binärabhängigkeiten | Einzige `scanignore`-Ausnahme ist die exakt bezeichnete Apache-2.0-Modelldatei; kein pauschales Ignorieren von Quell- oder Bibliotheksverzeichnissen |
-| Signierung | Release bleibt unsigniert, nicht debuggable; F-Droid entfernt die Debug-Signierkonfiguration und signiert selbst |
-| Versionsprüfung und Updates | Literale Release-Version im Android-Block; Tags `vX.Y.Z`; Debug-Laufnummern beeinflussen Release nicht |
-| Eindeutige App-ID | `de.netscout.app` bleibt erhalten; keine fremde App wird geforkt. Die Kontrolle über `netscout.de` ist damit nicht nachgewiesen; eine eigene Domain wird empfohlen, ist laut Policy aber keine allgemeine Pflicht |
-| Anti-Features | `NonFreeNet` erklärt die proprietären Suchdienste. Eine eigene SearXNG-Instanz ist optional; Index-Fallbacks können weiterhin proprietäre Dienste verwenden |
-| Keine nachgeladenen ausführbaren Dateien | Modell und Runtime sind bereits in der APK; keine Selbstaktualisierung oder Plug-in-Downloads |
-| Lokalisierte Store-Texte | `fastlane/metadata/android/de-DE` und `en-US`, inklusive Changelog pro Versionscode; die Oberfläche ist deutsch |
-| Pflege, Funktion und Reife | Suche, Relevanzbewertung und lokale Favoriten mit automatisierten Tests. Die Policy nennt mindestens drei Monate aktive Entwicklung oder eine ihrer Ausnahmen, etwa nachgewiesene Nutzer; diese Reife-/Nutzungsprüfung bleibt bei F-Droid |
+| Publicly accessible, complete source code | `https://github.com/Mcpasi/NETSCOUT`; must be cloneable without signing in for submission |
+| Free project license | Apache-2.0, copyright 2026 Mcpasi; `LICENSE` and `NOTICE`, also included in the APK |
+| Free libraries / trusted repositories | Maven Central, Google Maven, and Gradle Plugin Portal; fixed versions, no Firebase/GMS/tracking SDK; see `third-party/README.md` |
+| Free toolchain | OpenJDK 17, Gradle 8.11.1, Python 3.11+, Android SDK 35 / Build-Tools 35.0.0; Android SDK and freely licensed Maven artifacts fall under the documented exceptions |
+| Complete build on F-Droid | `metadata/de.netscout.app.yml`, `subdir: app`, `gradle: yes`; uses F-Droid's provided Gradle launcher |
+| Preparation before the build | `prebuild` downloads the two fixed model inputs and verifies size/SHA-256; the Gradle task generates assets from them offline |
+| No concealed binary dependencies | The only `scanignore` exception is the precisely identified Apache-2.0 model file; source/library directories are not broadly ignored |
+| Signing | Release stays unsigned and non-debuggable; F-Droid removes debug signing configuration and signs the APK itself |
+| Version checks and updates | Literal release version in the Android block; `vX.Y.Z` tags; debug run numbers do not affect release builds |
+| Unique app ID | `de.netscout.app` is retained; no other app is forked. This does not prove control of `netscout.de`; a personal domain is recommended but is not a general policy requirement |
+| Anti-features | `NonFreeNet` explains the proprietary search services. A personal SearXNG instance is optional; index fallbacks can still use proprietary services |
+| No downloaded executable files | Model and runtime are already in the APK; no self-updates or plugin downloads |
+| Localized store text | `fastlane/metadata/android/de-DE` and `en-US`, including a changelog per version code; the interface is German |
+| Maintenance, functionality, and maturity | Search, relevance assessment, and local favorites have automated tests. The policy specifies at least three months of active development or one of its exceptions, such as demonstrated users; F-Droid retains responsibility for this maturity/usage review |
 
-Das Modell und der Tokenizer werden aus der festgelegten Hugging-Face-Revision
-bezogen. Die Apache-2.0-Lizenz und Herkunft sind dokumentiert. ONNX Runtime 1.23.2
-wird als MIT-lizenzierte Maven-Central-AAR einschließlich nativer Bibliotheken
-bezogen. Dieses Rezept baut die Runtime und die Modellgewichte nicht neu.
-F-Droid entscheidet bei der Einreichung über ihre Akzeptanz und die abschließende
-Kennzeichnung. Ein bestandener Scanner ersetzt diese manuelle Prüfung nicht.
+The model and tokenizer come from the pinned Hugging Face revision. Their
+Apache-2.0 license and provenance are documented. ONNX Runtime 1.23.2 comes as an
+MIT-licensed Maven Central AAR including native libraries. This recipe does not
+rebuild the runtime or model weights. F-Droid decides their acceptance and final
+labeling during submission. A passing scanner does not replace manual review.
 
-## Derselbe Build in beiden Umgebungen
+## The same build in both environments
 
-Auf F-Droids Buildserver läuft das Rezept mit dessen Gradle-Launcher, OpenJDK und
-SDK. `prebuild` benötigt Zugriff auf die feste Hugging-Face-Revision einschließlich
-deren Download-Weiterleitungen. Der eigentliche Build benötigt die üblichen
-Gradle-/Maven-Downloads, aber keine Modell-Downloads. Ein vollständig netzloser
-Gradle-Build setzt zusätzlich bereits gecachte Maven-/Gradle-Abhängigkeiten voraus.
+On F-Droid's build server, the recipe uses its Gradle launcher, OpenJDK, and SDK.
+`prebuild` needs access to the pinned Hugging Face revision, including download
+redirects. The build itself needs the usual Gradle/Maven downloads, but no model
+downloads. A completely network-free Gradle build additionally requires cached
+Maven/Gradle dependencies.
 
-GitHub Actions installiert dieselben Toolversionen und `fdroidserver==2.4.5`.
-`scripts/check-fdroid-build.py` lintet das Einreichungsrezept, holt den
-Quellcheckout mit F-Droids eigener VCS-Schicht und führt dann
-`fdroid build --test --stop --no-tarball --scan-binary --refresh-scanner` in einem neuen Arbeitsordner
-aus. Nur für diesen Test werden Repo und Commit durch das lokale Git-Repo und
-dessen unveränderlichen `HEAD` ersetzt. Damit prüft auch ein Pull Request seine
-eigenen Änderungen. Das `sudo`-Setup entfällt dort, weil CI JDK/Python bereits
-installiert. Alle weiteren Rezeptschritte bleiben erhalten, einschließlich
-F-Droids Entfernen des Wrappers und der Signierung, Quellscan und APK-Scan.
+GitHub Actions installs the same tool versions and `fdroidserver==2.4.5`.
+`scripts/check-fdroid-build.py` lints the submission recipe, obtains the source
+checkout through F-Droid's own VCS layer, and runs
+`fdroid build --test --stop --no-tarball --scan-binary --refresh-scanner` in a new
+working directory. For this test only, the repository and commit are replaced
+with the local Git repository and its immutable `HEAD`. This also lets pull
+requests check their own changes. The `sudo` setup is omitted there because CI
+already installs JDK/Python. All other recipe steps remain, including F-Droid's
+removal of the wrapper and signing configuration, source scanning, and APK scanning.
 
-Lokal mit OpenJDK 17, Android SDK, Python 3.11+, `fdroidserver==2.4.5` und
-**Gradle 8.11.1 im PATH**, vom sauberen, committeten Stand aus:
+Locally, with OpenJDK 17, Android SDK, Python 3.11+, `fdroidserver==2.4.5`, and
+**Gradle 8.11.1 in PATH**, start from a clean, committed checkout:
 
 ```sh
 python3 -m unittest discover -s scripts/tests -v
@@ -59,36 +58,36 @@ python3 scripts/check-fdroid-build.py --work-dir /tmp/netscout-fdroid
 python3 scripts/verify-release-apk.py /tmp/netscout-fdroid/unsigned/netscout-release-unsigned.apk
 ```
 
-Das Skript akzeptiert nur einen leeren Arbeitsordner. Es baut ausschließlich
-committierte Änderungen. Die Unit-/Gerätetests laufen zusätzlich in den bisherigen
-GitHub-Jobs; die Release-Prüfung kontrolliert App-ID, feste Version, fehlende
-Signatur, Debuggable-Flag, das tatsächlich verpackte Modell und die Lizenzdateien.
+The script accepts only an empty working directory. It builds committed changes
+only. Unit/device tests also run in the existing GitHub jobs; release verification
+checks app ID, fixed version, absence of a signature, the debuggable flag, the
+model actually packaged, and license files.
 
-Lokal verifiziert am 20.10.2026 für 0.3.5: 153 JVM-/App-Unit-Tests und drei
-Python-Tests erfolgreich, Debug-/Release-Lint erfolgreich, beide APKs gebaut.
-Der Debug-Build übernimmt den angeforderten Versionscode 2000 und behält sein
-Zertifikat; Release bleibt bei Versionscode 6. Der vollständige F-Droid-Lauf aus
-`5cb6b2693fdd3beec1ba3828a2d8d2b15a3ce9d0` mit aktualisierten Scanner-Regeln
-besteht Quellscan, Release-Lint, Build und APK-Scan. Diese Prüfung lief unter
-OpenJDK 17 auf Debian mit Android SDK 35, außerhalb einer offiziellen F-Droid-VM.
+Locally verified on 2026-10-20 for 0.3.5: 153 JVM/app unit tests and three Python
+tests passed, debug/release lint passed, and both APKs were built. The debug build
+accepts the requested version code 2000 and retains its certificate; release
+stays at version code 6. The complete F-Droid run from
+`5cb6b2693fdd3beec1ba3828a2d8d2b15a3ce9d0`, with refreshed scanner rules, passes
+source scanning, release lint, build, and APK scanning. This check ran with
+OpenJDK 17 on Debian with Android SDK 35, outside an official F-Droid VM.
 
-## Einreichung und neue Versionen
+## Submission and new versions
 
-1. Den Quellcode öffentlich erreichbar halten. Für jedes Release `versionName`
-   und `versionCode` in `app/build.gradle.kts` erhöhen, lokalisierte Changelogs
-   ergänzen und den geprüften Release-Commit mit `vX.Y.Z` taggen.
-2. Dieses Rezept nach `fdroiddata/metadata/de.netscout.app.yml` kopieren und für
-   `Builds.commit` die vollständige Commit-ID des Tags verwenden. Bei einer
-   neuen Version die Versionsfelder und bei geändertem Modell dessen spezifische
-   `scanignore`-Prüfsumme aktualisieren. Keine Debug-APK als Release referenzieren.
-3. In `fdroiddata` `fdroid lint de.netscout.app` und
-   `fdroid build --server --test de.netscout.app` ausführen. Der GitHub-Test
-   verwendet den echten F-Droid-Prozess, jedoch keine offizielle Server-VM.
-4. Echte Screenshots der aktuellen App ergänzen und einen Merge Request bei
-   [fdroiddata](https://gitlab.com/fdroid/fdroiddata) einreichen. Modellherkunft,
-   enge Scan-Ausnahme und `NonFreeNet` im Antrag erläutern; Reife oder eine
-   zutreffende Policy-Ausnahme belegen.
+1. Keep source code publicly accessible. For each release, increase `versionName`
+   and `versionCode` in `app/build.gradle.kts`, add localized changelogs, and tag
+   the verified release commit as `vX.Y.Z`.
+2. Copy this recipe to `fdroiddata/metadata/de.netscout.app.yml` and use the tag's
+   full commit ID for `Builds.commit`. For a new version, update version fields
+   and, if the model changes, its specific `scanignore` checksum. Do not reference
+   a debug APK as a release.
+3. In `fdroiddata`, run `fdroid lint de.netscout.app` and
+   `fdroid build --server --test de.netscout.app`. The GitHub test uses the real
+   F-Droid process, but not an official server VM.
+4. Add actual screenshots of the current app and submit a merge request to
+   [fdroiddata](https://gitlab.com/fdroid/fdroiddata). Explain model provenance,
+   the narrow scan exception, and `NonFreeNet`; document maturity or an applicable
+   policy exception.
 
-Dieses Repository enthält die technische Vorbereitung. Ein F-Droid-Merge-Request,
-eine offizielle Buildserver-Ausführung und die Aufnahmeentscheidung sind eigene
-Schritte und werden durch das Veröffentlichen dieses Codes nicht vorweggenommen.
+This repository contains the technical preparation. A F-Droid merge request, an
+official build-server run, and the inclusion decision are separate steps; publishing
+this code does not establish their completion.

@@ -1,161 +1,84 @@
-# NetScout für Android
+# NetScout for Android
 
-Eine native Kotlin-/Jetpack-Compose-App für eine quellenübergreifende Keyword-Suche. Android 8.0+ (API 26), deutsche Oberfläche, keine Anmeldung bei NetScout und kein eigener Backend-Dienst nötig.
+Search the web and public discussions from one native Android app. Enter your keywords, choose up to six sources, and let NetScout check whether the results discuss your search topic together.
 
-Copyright **2026 Mcpasi**. Der eigene Code, die Dokumentation und das Artwork stehen unter [Apache-2.0](LICENSE). Hinweise zu fremden Komponenten: [NOTICE](NOTICE) und [third-party/README.md](third-party/README.md).
+**Android 8.0 or newer (API 26).** The app interface is currently in German. No NetScout account, payment, API key, or separate backend is required. Search results can be in any language.
 
-- Keywords, optionale Von-/Bis-Daten und sechs auswählbare Quellen.
-- Alle sechs Quellen ohne Schlüssel nutzbar. Websuche ist vorausgewählt; Reddit und YouTube nutzen ohne eigene Zugänge den öffentlichen Suchindex.
-- Gemeinsames Suchthema statt bloßer Wortvorkommen: Kandidaten werden anhand zusammengehöriger Textstellen und eines lokalen mehrsprachigen Relevanzmodells bewertet. `Codex,mobile,android` ist eine beliebige Beispielanfrage; keine Begriffe sind im Produktionscode festgelegt.
-- Kommas, Semikolons und Leerzeichen einschließlich kopierter Unicode-Leerzeichen trennen Keywords; Anführungszeichen gruppieren genaue Phrasen. Die Oberfläche zeigt alle erkannten, erforderlichen Begriffe.
-- Neueste Beiträge oder höchste Relevanz; die Sortier-Checkboxen sind gegenseitig exklusiv.
-- Echte Treffer, Links zur Originalquelle, Quellenstatus mit Abfrage-/Prüfphase und Kandidatenzahl sowie weitere Ergebnisse per Pagination. Nach dem Suchstart wird der Quellenstatus eingeblendet.
-- Stern an jedem Treffer zum Speichern oder Entfernen. Unter **Favoriten** bleiben bis zu 20 Ergebnisse mit Textvorschau dauerhaft auf dem Gerät verfügbar, auch nach einem App-Neustart.
-- Parallele Quellenabfragen; Fehler einzelner Plattformen beeinträchtigen die übrigen nicht.
-- Optional verschlüsselt gespeicherte Zugänge, Speicher-Cache für erfolgreiche Seiten, Abbruch und API-Pausen.
+## What you can do
 
-## APK testen
+- Search the web, Reddit, YouTube, GitHub, Hacker News, and three Stack Exchange forums.
+- Narrow results by publication date and sort by newest or relevance.
+- Read the original passage behind a match, expand it, and open its source.
+- See each source's progress, candidate count, confirmed matches, and service errors.
+- Load more results and cancel a running search.
+- Save up to **20 favorites** on your device, with previews you can read offline.
 
-Im Repository unter **[Actions → Android tests & APKs](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml)** einen Lauf öffnen und unter **Artifacts** `netscout-debug-<Laufnummer>` herunterladen. Das ZIP enthält `netscout-debug.apk`, deren SHA-256 und den Zertifikats-Fingerabdruck. APK auf Android installieren und bei späteren Läufen über die bestehende Version aktualisieren.
+NetScout uses a bundled multilingual relevance model to assess the passages returned by search services. It runs on your device and requires no paid AI API or model download in the app. Matching can still be imperfect, and NetScout can only assess the content its sources return.
 
-Alle Debug-Builds verwenden den eingecheckten [Entwicklungsschlüssel](debug-signing/README.md). Er darf nicht rotiert werden, solange die Testinstallation aktualisierbar bleiben soll. Android benötigt zusätzlich einen mindestens gleich hohen Versionscode. Für CI steigt dieser mit jeder neuen Workflow-Ausführung.
+## Install a test APK
 
-## Welche Daten sind sofort verfügbar?
+1. Open **[Actions → Android tests & APKs](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml)** and select a successful run. GitHub may require you to sign in to download artifacts.
+2. Under **Artifacts**, download `netscout-debug-<run number>`.
+3. Extract the ZIP and install `netscout-debug.apk` on your Android device. Allow installation from the app you use to open the APK if Android asks.
 
-| Quelle | Zugriff in NetScout | Grenzen |
+The ZIP also contains the APK's SHA-256 and signing-certificate fingerprint. Later debug builds can update the existing test installation when their version code is at least as high. All debug builds use the same [public development certificate](debug-signing/README.md).
+
+**F-Droid status:** the repository includes a build recipe and verification notes. This does not yet mean NetScout is available in the official F-Droid repository. The `netscout-fdroid-release-<run number>` artifact contains an unsigned release APK for verification; use the debug APK above for testing. See the [F-Droid preparation notes](fdroid/README.md) for details.
+
+## Run your first search
+
+1. Enter keywords, for example `kotlin,android`. Commas, semicolons, and spaces separate terms. Use quotation marks for a phrase, such as `"local llm",Android`. The app shows the required terms it recognized.
+2. Choose your sources. **Web, GitHub, Forums, and Hacker News** are selected by default. Reddit and YouTube can also be used immediately.
+3. Optionally select a start date, an end date, and a sort order. The newest and relevance options are mutually exclusive.
+4. Start the search. NetScout brings the source status into view and shows results after checking their content.
+5. Expand a preview to read the assessed passage, open its original link, or tap the star to save it. Load more pages when available.
+
+All six sources work with empty credential fields. The gear icon opens **Optionale Suchzugänge** (optional search credentials) if you want to add your own API access or a permitted SearXNG HTTPS instance with JSON output.
+
+## Sources and coverage
+
+| Source | Available without setup | Main limits |
 | --- | --- | --- |
-| Web | Öffentliche Brave-Suche, DuckDuckGo als zweiter Dienst; ohne Einrichtung | Titel und Index-Textstellen, kein Volltextcrawl. Keine eigenen Tages-/Monatskontingente. Verfügbarkeit, Sperren und Seitentiefe bestimmt der Suchdienst. |
-| Reddit | Öffentliche Indexsuche nach Diskussionen, ohne Token | Indexierte Beiträge statt vollständiger Reddit-API. Reddit selbst blockiert anonyme API-Abfragen. Genehmigter OAuth-Zugang bleibt optional. |
-| YouTube | Öffentliche Indexsuche nach Videos, ohne API-Key | Titel und Index-Textstellen statt vollständiger Videobeschreibung. Explizite Veröffentlichungsdaten werden übernommen, relative Datumsangaben bleiben unbekannt. Eigener Data-API-Key bleibt optional. |
-| GitHub | Öffentliche Repositories, Issues und Pull Requests über die REST API, ohne Token; Index bei Ausfall | Drei API-Abfragen pro Seite. Name/Beschreibung bzw. Titel/Text, keine Kommentare und kein Code-Suchindex. Anonyme Suche limitiert; optionaler Token erhöht das Kontingent. |
-| Hacker News | Öffentliche Story-Beiträge über Algolia, ohne Schlüssel; Index bei Ausfall | Link öffnet die HN-Diskussion. Keine vollständige Kommentarsuche. |
-| Foren | Fragen auf Stack Overflow, Super User und Server Fault über die Stack Exchange API; Index bei Ausfall | Kein universeller Forenindex. API-Kontingente und `backoff` werden beachtet; Indexsuche bleibt auf dieselben drei Foren beschränkt. |
+| Web | Public Brave search, with DuckDuckGo as a fallback | Titles and indexed passages, rather than a full crawl of target pages. The service controls availability and result depth. |
+| Reddit | Publicly indexed discussions | Index coverage rather than the complete Reddit API. Approved OAuth access is optional. |
+| YouTube | Publicly indexed videos | Titles and indexed passages rather than full descriptions or transcripts. A personal Data API key is optional. |
+| GitHub | Public repositories, issues, and pull requests through the REST API; index fallback | Repository names/descriptions and issue/PR titles/bodies. No comments, README search, code search, or Discussions. Anonymous API limits apply; a token can increase the allowance. |
+| Hacker News | Public stories through Algolia; index fallback | Links open the HN discussion. No complete comment search. |
+| Forums | Stack Overflow, Super User, and Server Fault through the Stack Exchange API; index fallback | These three sites only. API quotas and requested pauses apply. |
 
-Einfach Keywords eingeben und suchen. Web, GitHub, Foren und HN sind vorausgewählt; Reddit und YouTube lassen sich direkt hinzuwählen. Über das Zahnrad **Optionale Suchzugänge** können vorhandene eigene API-Zugänge oder eine eigene/erlaubte SearXNG-HTTPS-Instanz mit JSON-Ausgabe ergänzt werden. Alle Felder können leer bleiben. Die GitHub-Identität des Entwicklungsrechners wird niemals in die APK übernommen.
+NetScout has no daily search quota of its own. External services can still limit requests, show a CAPTCHA, change their layout, or stop returning more pages. The app reports these conditions and respects pauses. When a source is blocked or unavailable, you can open the same keywords and platform restriction in your browser. Browser results are provided by that service and are not assessed by NetScout's local model.
 
-NetScout verlangt weder Konto noch Bezahlung noch ein eigenes tägliches Suchkontingent. Eine garantierte unbegrenzte Suche bei fremden Diensten gibt es trotzdem nicht. Die App liest öffentlich abrufbare Suchergebnisseiten, erkennt Sperr-/CAPTCHA-Seiten, respektiert Pausen und verwendet keine Demo-Treffer. API-Zugangsdaten werden niemals an den Suchindex weitergegeben. Ausgefallene Direktzugänge und optionale eigene Suchdienste wechseln auf der ersten Seite automatisch zum gekennzeichneten öffentlichen Index; Pagination bleibt beim antwortenden Dienst. Ein hängender Erstzugriff lässt nach vier Sekunden Zeit für den Ausweichweg. Öffentliche Websuche folgt angebotenen Fortsetzungen ohne festes App-Seitenlimit. Bei Sperren/Ausfällen lassen sich dieselben Keywords samt Plattformbeschränkung ohne Schlüssel im normalen Browser öffnen.
+Dates refer to **publication or creation in UTC**, including both selected days. Results without a known publication date are excluded when a date filter is active, so indexed searches may return fewer matches. **Newest** sorts the results already loaded; complete historical coverage is not guaranteed.
 
-Geprüfte Alternativen, echte Abfragen und reproduzierte Fehler vor der Änderung: [docs/keyless-search.md](docs/keyless-search.md).
+For details about matching, languages, date handling, pagination, and fallbacks, see the [search guide](docs/search-guide.md).
 
-### Datumsfilter und Sortierung
+## Save favorites
 
-Die Datumsgrenzen beziehen sich auf **Veröffentlichung/Erstellung in UTC**, einschließlich beider ausgewählter Tage. Soweit die API es unterstützt, werden Grenzen bereits an die Quelle übergeben; danach wird zentral erneut exakt gefiltert. Reddit und Suchindizes werden lokal gefiltert. Treffer ohne bekanntes Datum werden bei aktivem Datumsfilter ausgeschlossen; Indexsuche kann deshalb deutlich weniger Treffer zeigen. Crawl-/Änderungsdaten oder relative Angaben werden nicht als Veröffentlichungsdatum ausgegeben. Weitere Seiten können nötig sein; eine vollständige historische Suche ist nicht garantiert. „Neueste“ sortiert die **geladenen** Treffer, unbekannte Daten stehen am Ende.
+Tap an empty star to save a result; tap the filled star to remove it. Open **Favoriten** in the top bar to view saved results without running another search. The back arrow or Android back button returns to the search.
 
-Seit 0.2.0 genügt ein Vorkommen aller Wörter irgendwo im Beitrag nicht mehr: Titel und eine zusammenhängende Textstelle müssen die Keywords gemeinsam belegen. Eine Textstelle kann auch zwei benachbarte Sätze desselben Absatzes umfassen. Fehlt dort ein vollständiger Beleg, prüft das lokale Modell außerdem Originalstellen bis 1.000 Zeichen über Absatzgrenzen hinweg, mit einer zusätzlichen Prüfung des Bezugs zwischen den benötigten Abschnitten. Drei unabhängige Release-Note-Abschnitte für „Codex“, „mobile“ und „Android“ werden weiterhin verworfen. Bei langen Texten werden vollständige Trefferfenster über alle Vorkommen gesucht; die aufklappbare Vorschau zeigt die bewertete Originalstelle mit Hervorhebung. Bis zu vier Textstellen pro Kandidat verhindern, dass zwei kurze Erwähnungen eine spätere Erklärung verdrängen. Ein passender Titel verdeckt dabei keine stärkeren Textbelege. Der Quellenstatus unterscheidet laufende Abfragen, die Inhaltsprüfung geladener Kandidaten und bestätigte Treffer. Auch eine erfolgreiche Antwort ohne Kandidaten wird ausdrücklich angezeigt. Verworfenes bleibt bei der Pagination berücksichtigt, damit nach einer leeren gefilterten Seite weitergesucht werden kann.
+Favorites preserve the title, original link, displayed passage, sources, known publication dates, source metadata, and search keywords used for highlighting. Up to **20 results** remain stored without an expiry date. Links that differ only in tracking parameters count as one result. When the list is full, remove a favorite before adding another.
 
-Die Relevanzsortierung nutzt primär den gelernten Modellwert; Reciprocal Rank Fusion (`1 / (60 + Rang)`) dient mit kleinem Gewicht als Tie-Breaker. Inkompatible Popularitätswerte verschiedener Plattformen werden nicht vermischt. Identische URLs werden über Quellen und Seiten zusammengeführt, Trackingparameter und Fragmente ignoriert. Bedeutungsvolle Parameter wie YouTube-Video-IDs bleiben erhalten.
+New searches, credential changes, and app restarts keep your favorites. Previews work offline; opening an original source needs a connection. Uninstalling the app or clearing its data deletes favorites and saved credentials. Switching from a debug installation to a differently signed F-Droid installation requires uninstalling first.
 
-Die Suche berücksichtigt alle Sprachen unabhängig von der deutschen App-Oberfläche. GitHub/HN erhalten keine Deutsch- oder Länder-Vorgabe; SearXNG wird explizit mit `language=all` angesprochen. Die Sprache der Keywords und die Abdeckung der Plattformen beeinflussen den Sprachmix weiterhin. Das Modell wurde auf 14 Sprachen trainiert. Die Kandidatenabfragen bleiben wörtlich, ohne automatische Übersetzung oder Synonymerweiterung: Der semantische Reranker kann nur bewerten, was die Plattform liefert. `AI` trifft beispielsweise nicht allein auf `Gmail` zu. HN erhält zusätzlich deaktivierte Tippfehler-/Präfixsuche und darf fehlende Wörter nicht automatisch weglassen.
+## Privacy and credentials
 
-Das Modell läuft vollständig auf dem Gerät, ohne kostenpflichtige KI-API, Backend oder Modell-Download in der App. Es vergrößert die APK und benötigt zusätzliche Rechenzeit. Inhaltliche Bewertungen können falsch sein; kurze mehrdeutige Anfragen bleiben mehrdeutig. Die konservative Textstellenprüfung kann passende Erklärungen über mehrere Absätze auslassen. Modell, Lizenz, feste Prüfsummen, Datenschutz und Qualitätsgrenzen: [docs/relevance-model.md](docs/relevance-model.md).
+Your keywords are sent to the selected platforms or the search index in use: Brave, DuckDuckGo on fallback, or an optional SearXNG instance. Failed direct requests can also fall back to the public index. Target pages are not fetched separately for relevance assessment; the model assesses the text already returned by the source, locally on your device.
 
-### Favoriten
+The app has no telemetry and needs internet access, with no location, contacts, or storage permission. Search results stay in memory unless you explicitly save them as favorites. There is no search history, synchronization, or cloud backup. Forms and current results survive screen rotation, but not a process restart. Successful pages use an in-memory cache of up to 64 pages for 60 seconds.
 
-Nach einer erfolgreichen Suche speichert ein Tipp auf den leeren Stern den Treffer. Der gefüllte Stern entfernt ihn wieder. **Favoriten** in der oberen Leiste öffnet die gespeicherten Ergebnisse auch ohne laufende Suche. Die Ansicht zeigt den belegten Platz und erlaubt das Öffnen der Originalquelle sowie das Entfernen über den Stern. Die Zurück-Taste oder der Pfeil führt zur Suche zurück.
+Optional credentials are encrypted locally with AES-GCM and a non-exportable Android Keystore key. They are sent only to their respective API, never to an index fallback, logs, or saved instance state. App backups are disabled. Save an empty credential field to remove its token. The development machine's GitHub identity is never included in the APK.
 
-Bis zu **20 Ergebnisse** bleiben ohne Ablaufzeit lokal gespeichert: Titel, Original-Link, angezeigte Textstelle, Quellen, bekannte Veröffentlichungsdaten und Quellenangaben. Gleiche Links mit unterschiedlichen Trackingparametern zählen als ein Ergebnis. Bei vollem Speicher erscheint ein Hinweis; entferne zuerst einen Favoriten, um einen neuen zu speichern. Neue Suchanfragen, geänderte Zugänge und App-Neustarts löschen keine Favoriten. Die Vorschau ist offline lesbar; zum Öffnen der Originalquelle wird eine Verbindung benötigt. Deinstallation oder das Löschen der App-Daten entfernt auch die Favoriten.
+## Documentation
 
-## Lokal bauen
+- [Changelog](CHANGELOG.md): version history.
+- [Search guide](docs/search-guide.md): matching, dates, languages, and service behavior.
+- [Development guide](docs/development.md): local builds, tests, APK verification, and CI.
+- [Architecture](docs/architecture.md): modules and provider extensions.
+- [Local relevance model](docs/relevance-model.md): model origin, checksums, licensing, and limitations.
+- [Keyless search investigation](docs/keyless-search.md): evaluated services and reproduced failures.
+- [Search regressions](docs/search-regressions.md), [0.3.1 quality report](docs/search-quality-0.3.1.md), [0.3.2 bugfix report](docs/bugfixes-0.3.2.md), and [0.3.3 quality report](docs/search-quality-0.3.3.md): technical evidence and repeatable checks.
+- [F-Droid preparation](fdroid/README.md): recipe, recorded verification, and submission steps.
 
-Voraussetzungen: JDK 17, Python 3.11+, Android SDK mit Plattform 35 und Build-Tools 35.0.0. In Android Studio öffnen oder `ANDROID_HOME` setzen; alternativ eine lokale `local.properties` mit `sdk.dir=/pfad/zum/sdk` erstellen. Gradle 8.11.1 samt SHA-256-Prüfung ist als Wrapper enthalten. Der erste Build lädt etwa 136 MB Modell-/Tokenizerdateien aus einer festen Hugging-Face-Revision und prüft deren SHA-256; weitere Builds nutzen den lokalen Cache. Keine Python-Zusatzpakete nötig.
+## License
 
-```sh
-./gradlew :core:search:test :data:search:test :data:relevance:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
-python3 scripts/verify-debug-signature.py app/build/outputs/apk/debug/app-debug.apk
-adb install -r app/build/outputs/apk/debug/app-debug.apk
-```
-
-Geräte-/Oberflächentests bei laufendem Emulator oder angeschlossenem Android-Gerät:
-
-```sh
-./gradlew :app:connectedDebugAndroidTest
-```
-
-GitHub Actions führt Unit-Tests einschließlich echter Modellinferenz und Tokenizer-Referenzvektoren, Android Lint, den signierten Debug-Build und in einem separaten Job Emulator-Tests auf API 29 aus. Ein Gerätetest lädt das verpackte Modell über den Produktionspfad. Der Workflow ist zusätzlich über `workflow_dispatch` manuell startbar. Test- und Lint-Berichte werden als Artefakte bereitgestellt. Plattformtests verwenden lokale HTTP-Fixtures/Fake-Provider; sie verbrauchen keine Plattformkontingente und benötigen keine Secrets.
-
-Nach den Emulator-Tests wird außerdem die tatsächliche APK installiert und über ihre Launcher-Activity gestartet. Eine Bildschirmaufnahme dieses Startchecks liegt im Artefakt `android-ui-tests`.
-
-### Release und F-Droid
-
-Der zusätzliche CI-Job **F-Droid source scan & unsigned release APK** führt das
-[F-Droid-Baurezept](fdroid/metadata/de.netscout.app.yml) mit `fdroid build` aus.
-Dabei entfernt F-Droid selbst den Gradle-Wrapper und die Debug-Signierkonfiguration
-und prüft Quellen sowie APK auf bekannte unfreie Komponenten. Die Modellgewichte
-werden in `prebuild` geladen und per Größe/SHA-256 geprüft. Der eigentliche
-Gradle-Build arbeitet für diese Assets zwingend offline. GitHub-Umgebungsvariablen,
-Tokens oder Signierschlüssel werden dafür nicht benötigt.
-
-Das Artefakt `netscout-fdroid-release-<Laufnummer>` enthält eine **unsignierte**
-Release-APK samt SHA-256. F-Droid übernimmt die Produktionssignatur. Die
-Release-Version ist fest im Quellcode definiert (aktuell 0.3.5, Versionscode 6);
-`netscout.versionCode` verändert ausschließlich Debug-Builds.
-
-```sh
-python3 scripts/prepare-relevance-model.py --download-only --cache-dir .model-cache
-./gradlew :app:lintRelease :app:assembleRelease \
-  -Pnetscout.modelCache=.model-cache -Pnetscout.offlineModel=true
-python3 scripts/verify-release-apk.py app/build/outputs/apk/release/app-release-unsigned.apk
-```
-
-Die bestehende Debug-Installation und eine von F-Droid signierte Installation
-haben unterschiedliche Zertifikate. Ein Wechsel erfordert eine Deinstallation,
-die lokale Favoriten und Zugänge löscht. Die Debug-Signatur bleibt für Updates
-innerhalb der bisherigen Testinstallationen unverändert.
-
-Abgleich mit den Aufnahmebedingungen, vollständiger Testaufruf und Schritte zur
-Einreichung: [fdroid/README.md](fdroid/README.md). Die Vorbereitung und ein
-erfolgreicher Build bedeuten noch keine Aufnahme in das offizielle Repository.
-
-Ein optionaler Integrationstest prüft alle sechs Quellen ohne Zugangsdaten durch dasselbe lokale Modell und gibt Abfragephasen, Diensthinweise, Kandidatenzahlen und bestätigte Treffer aus. Er nutzt öffentliche Dienste und läuft deshalb nicht automatisch in CI:
-
-```sh
-./gradlew :data:search:checkLiveSearch -PsearchKeywords=Codex,mobile,android
-# Optional zwei echte Ergebnisseiten nur der Web-/Reddit-/Videosuche:
-./gradlew :data:search:checkLiveSearch -PsearchKeywords=kotlin,android -PsearchSources=WEB,REDDIT,YOUTUBE -PsearchPages=2
-```
-
-Reproduktion der vor der Korrektur nachgewiesenen Suchfehler: [docs/search-regressions.md](docs/search-regressions.md).
-
-Version **0.3.5** ergänzt das F-Droid-Baurezept, Release-Prüfungen in GitHub CI, freie Projektlizenz und Store-Metadaten. Modellvorbereitung und eigentlicher Build sind getrennt; Release-Versionscodes bleiben unabhängig von CI-Laufnummern.
-
-Version **0.3.4** ergänzt dauerhafte lokale Favoriten mit einem Limit von 20, einer eigenen Ansicht und Löschfunktion. JVM-Tests prüfen Speicherung, Neustart, URL-Identität, gleichzeitige Änderungen, das Limit und Fehlerfälle; Android-Tests prüfen den Dateispeicher und die Bedienung der Sterne samt Favoritenansicht.
-
-Version **0.3.3** verhindert, dass Formatierungsumbrüche innerhalb von HTML-/Markdown-Absätzen passende Treffer verbergen. Im festen Prüfkorpus mit echtem Relevanzmodell steigt die Zahl korrekt bewerteter Fälle von **20/24 auf 24/24**; echte Absatz-, Listen- und Codegrenzen bleiben erhalten. Vorher-/Nachher-Berichte und Wiederholung: [docs/search-quality-0.3.3.md](docs/search-quality-0.3.3.md).
-
-Version **0.3.2** beachtet auch die mit HTTP 503 angeforderte `Retry-After`-Pause und erkennt ungültige JSON-Trefferlisten als Quellenfehler, damit der vorhandene Ausweichweg greifen kann. Reproduktionen vor der Korrektur und Regressionstests: [docs/bugfixes-0.3.2.md](docs/bugfixes-0.3.2.md).
-
-Die [Qualitätsmessung für 0.3.1](docs/search-quality-0.3.1.md) dokumentiert vier weitere reproduzierte Fehlerursachen, die Korrekturen und maschinenlesbare Vorher-/Nachher-Ergebnisse. Der feste Prüfkorpus umfasst Textaufbereitung mit echtem lokalem Relevanzmodell, URL-Deduplizierung und Ausweichwege bei unlesbaren Suchantworten. Er lässt sich ohne Abfragen öffentlicher Suchdienste wiederholen:
-
-```sh
-./gradlew :data:search:checkSearchQuality
-# Bericht: data/search/build/reports/search-quality.json
-```
-
-## Architektur und Erweiterung
-
-```text
-app/           Compose-UI, ViewModel, Android-Keystore, App-Konfiguration
-core/search/   Modelle, Validierung, Provider-Vertrag, parallele Engine, Ranking/Dedup
-data/search/   HTTP-Transport, Provider und Fallback-Verknüpfung
-data/relevance/ Lokaler ONNX-Cross-Encoder, Tokenizer, Modelltests
-```
-
-Die drei Bibliotheksmodule sind reine Kotlin/JVM-Module. Neue Plattformen implementieren `SearchProvider`, liefern `SourcePage` mit Treffern und optionalem `SearchCursor` und werden in `ProviderFactory` registriert. `SearchRelevance` trennt die Trefferbewertung von den Plattformadaptern und erlaubt spätere alternative Modelle. `SourceException` unterscheidet fehlende Einrichtung, Rate-Limit und Ausfälle. Neue Werte in `SearchSource` erscheinen automatisch in der Quellenauswahl. Details und nächste Ausbauschritte: [docs/architecture.md](docs/architecture.md).
-
-## Datenschutz und Zugangsdaten
-
-Suchbegriffe gehen an die ausgewählten Plattformen oder den verwendeten Suchindex (Brave, bei Ausfall DuckDuckGo, optional eigene SearXNG-Instanz). Bei Direktzugriffsfehlern können sie an den Index-Ausweichweg gehen. Zielseiten werden zur Bewertung nicht zusätzlich abgerufen. Die App braucht Internetzugriff, aber keine Standort-, Kontakt- oder Speicherberechtigung. Sie enthält keine Telemetrie. Suchergebnisse bleiben im Arbeitsspeicher (max. 64 Seiten, 60 Sekunden Cache), außer du speicherst sie ausdrücklich als Favoriten. Es gibt keine Suchhistorie. Formulare und aktuelle Treffer überleben eine Bildschirmdrehung, aber keinen Prozessneustart. Bis zu 20 Favoriten samt ursprünglichen Keywords für die Hervorhebung werden ohne Ablaufzeit im privaten App-Dateispeicher aufbewahrt. Es erfolgt keine Synchronisierung oder Sicherung in der Cloud. Entfernen über den Stern löscht den gespeicherten Eintrag dauerhaft.
-
-Zugänge werden mit AES-GCM und einem nicht exportierbaren Android-Keystore-Schlüssel lokal verschlüsselt. App-Backups sind deaktiviert. Die Zugänge werden nicht im Saved-Instance-State oder in Logs gespeichert und nur an die jeweilige API gesendet. Deinstallation entfernt die lokalen Zugänge. Leere Zugangsfelder speichern entfernt die entsprechenden Tokens. Für größere Verteilung sind ein eigener Backend-Dienst und geregelte OAuth-/Schlüsselverwaltung vorgesehen.
-
-## Primärquellen zum Datenzugriff
-
-Geprüft am 19.10.2026; Vorgaben und Kontingente können sich ändern:
-
-- [GitHub Search API, Limits und unvollständige Ergebnisse](https://docs.github.com/en/rest/search/search)
-- [Hacker-News-Suche über Algolia](https://hn.algolia.com/api)
-- [Stack Exchange Advanced Search](https://api.stackexchange.com/docs/advanced-search) und [Rate Limits](https://api.stackexchange.com/docs/throttle)
-- [YouTube Search API](https://developers.google.com/youtube/v3/docs/search/list) und [Kontingente](https://developers.google.com/youtube/v3/determine_quota_cost)
-- [Reddit Data API und OAuth-Anforderungen](https://support.reddithelp.com/hc/en-us/articles/16160319875092-Reddit-Data-API-Wiki)
-- [SearXNG Search API und JSON-Konfiguration](https://docs.searxng.org/dev/search_api.html)
-- [DuckDuckGo HTML-/Lite-Suche](https://duckduckgo.com/duckduckgo-help-pages/features/non-javascript) und [Brave-Suchoberfläche](https://search.brave.com/)
+Copyright **2026 Mcpasi**. NetScout's own code, documentation, and artwork are licensed under [Apache-2.0](LICENSE). Third-party components retain their own licenses; see [NOTICE](NOTICE) and [third-party/README.md](third-party/README.md).

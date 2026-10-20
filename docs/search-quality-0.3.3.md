@@ -1,11 +1,11 @@
-# Suchkorrektur 0.3.3: Umgebrochene Absätze
+# Search fix 0.3.3: wrapped paragraphs
 
-Ausgangsstand: `72a06791970d107f70c40bffbea1aa67453b2bfe` (0.3.2), geprüft am 19.10.2026.
-Die neuen Tests und der erweiterte Prüfkorpus wurden zuerst gegen unveränderten Produktionscode ausgeführt. Danach wurden dieselben Eingaben mit der Korrektur geprüft. Alle Suchantworten stammen von lokalem MockWebServer; Zugangsdaten und öffentliche Suchdienste sind für die Messung nicht erforderlich. Das unveränderte, per Prüfsumme festgelegte ONNX-Relevanzmodell wird tatsächlich ausgeführt.
+Baseline: `72a06791970d107f70c40bffbea1aa67453b2bfe` (0.3.2), reviewed on 2026-10-19.
+The new tests and expanded corpus were first run against unchanged production code. The same inputs were then checked with the fix. All search responses come from local MockWebServer; credentials and public search services are not required for measurement. The unchanged, checksum-pinned ONNX relevance model is actually executed.
 
-## Reproduzierter Fehler
+## Reproduced failure
 
-Diese Markdown-Zeilen bilden **einen** Absatz; seine Zeilenumbrüche werden beim Rendern als Leerzeichen behandelt:
+These Markdown lines form **one** paragraph; their line breaks render as spaces:
 
 ```markdown
 A native Codex
@@ -13,43 +13,43 @@ mobile client for
 Android.
 ```
 
-Dasselbe gilt für Zeilenumbrüche innerhalb eines HTML-`<p>`-Elements. Bisher übernahm `fullText` diese Formatierungsumbrüche als harte Zeilengrenzen. Die Textstellenprüfung zerlegte dadurch den zusammenhängenden Satz. Die drei neuen positiven Provider-Fixtures für GitHub-Issues, Reddit und Hacker News wurden sowohl von der Kontextprüfung als auch vom echten Relevanzmodell verworfen.
+The same applies to line breaks inside an HTML `<p>` element. Previously, `fullText` retained those formatting breaks as hard line boundaries. Passage checking therefore split the connected sentence. The three new positive provider fixtures for GitHub issues, Reddit, and Hacker News were rejected by both context checking and the real relevance model.
 
-Ein zusätzlicher negativer Fall besteht aus drei unabhängigen Markdown-Absätzen für Codex-Webintegration, Mobile-Safari-Layout und Android-Berechtigungen. Jeder Absatz ist im Quelltext nochmals umgebrochen. Diese künstlichen Teilstücke führten bisher außerdem zu einem falsch akzeptierten Modelltreffer. Nach der Korrektur erhält die bestehende Kontinuitätsprüfung die vollständigen Absätze und verwirft den Fall.
+An additional negative case contains three unrelated Markdown paragraphs about Codex web integration, Mobile Safari layout, and Android permissions. Each paragraph is also wrapped in the source text. These artificial fragments previously caused a falsely accepted model match. After the fix, the existing continuity check receives complete paragraphs and rejects the case.
 
-## Korrektur und Funktionserhalt
+## Fix and preserved behavior
 
-`JsonHelpers.fullText` vereinheitlicht HTML-Formatierungsleerraum in expliziten Textblöcken wie `p`, `li` und `div`, bevor die bestehenden Absatzgrenzen eingefügt werden. Markdown nutzt denselben Pfad nach dem CommonMark-Rendering. Wortlaut, Satzzeichen und Reihenfolge bleiben erhalten.
+`JsonHelpers.fullText` normalizes HTML formatting whitespace in explicit text blocks such as `p`, `li`, and `div` before inserting the existing paragraph boundaries. Markdown follows the same path after CommonMark rendering. Wording, punctuation, and order are preserved.
 
-Echte Absätze, Listen, `<br>`, harte Markdown-Zeilenumbrüche und vorformatierte Codezeilen bleiben getrennt. Unmarkierte Klartext-Snippets behalten ihre bisherigen Zeilengrenzen. Fünf neue Regressionstests prüfen diese Eigenschaften. Quellen, Suchabfragen, Datumsfilter, Pagination, Ausweichwege, Rankingverfahren, Modell und Modellschwellen bleiben erhalten; keine Funktion wurde entfernt.
+Actual paragraphs, lists, `<br>`, hard Markdown line breaks, and preformatted code lines stay separate. Unmarked plain-text snippets retain their existing line boundaries. Five new regression tests cover these properties. Sources, queries, date filters, pagination, fallbacks, ranking method, model, and model thresholds are preserved; no feature was removed.
 
-## Gemessene Verbesserung
+## Measured improvement
 
-Der bisherige Korpus mit 20 Textfällen bleibt vollständig enthalten. Hinzu kommen drei passende umgebrochene Absätze und ein unpassender Beitrag mit getrennten Abschnitten: insgesamt **24 Fälle**, davon 17 relevant und 7 irrelevant.
+The previous corpus of 20 text cases is retained in full. Three relevant wrapped paragraphs and one irrelevant post with separate sections are added: **24 cases** total, with 17 relevant and 7 irrelevant.
 
-| Messung im festen Korpus | Vorher | Nachher |
+| Measurement in the fixed corpus | Before | After |
 | --- | ---: | ---: |
-| Korrekt bewertete Textfälle | 20/24 | **24/24** |
-| Richtig akzeptierte Treffer | 14 | **17** |
-| Verlorene passende Treffer | 3 | **0** |
-| Falsch akzeptierte Treffer | 1 | **0** |
-| Precision | 93,33 % | **100 %** |
-| Recall | 82,35 % | **100 %** |
-| F1 | 0,875 | **1,000** |
-| URL-Identität | 8/8 | 8/8 |
-| Ausweich-/Fehlerverhalten, drei Durchläufe | 24/24 | 24/24 |
-| Gezielte Regressionstests | 24/30 | **30/30** |
+| Correctly assessed text cases | 20/24 | **24/24** |
+| Correctly accepted matches | 14 | **17** |
+| Missed relevant matches | 3 | **0** |
+| Falsely accepted matches | 1 | **0** |
+| Precision | 93.33% | **100%** |
+| Recall | 82.35% | **100%** |
+| F1 | 0.875 | **1.000** |
+| URL identity | 8/8 | 8/8 |
+| Fallback/error handling, three runs | 24/24 | 24/24 |
+| Targeted regression tests | 24/30 | **30/30** |
 
-Vor der Änderung schlugen zwei Textaufbereitungstests, drei Provider-Fälle und der Modelltest fehl. Nachher bestehen alle 30 mit identischen Testquellen und Fixtures. Alle bisherigen 20 Textfälle bleiben korrekt. Dies ist ein diagnostischer Regressionskorpus, keine Schätzung der Trefferqualität im gesamten Web und keine Geschwindigkeitsmessung.
+Before the change, two text-preparation tests, three provider cases, and the model test failed. Afterward, all 30 pass with identical test sources and fixtures. All previous 20 text cases stay correct. This is a diagnostic regression corpus, not an estimate of search quality across the web or a speed measurement.
 
-Maschinenlesbare Originalergebnisse:
+Original machine-readable results:
 
-- [Qualität vorher](search-quality/0.3.3/before.json) und [nachher](search-quality/0.3.3/after.json)
-- [Tests vorher](search-quality/0.3.3/before-tests.json) und [nachher](search-quality/0.3.3/after-tests.json)
+- [Quality before](search-quality/0.3.3/before.json) and [after](search-quality/0.3.3/after.json)
+- [Tests before](search-quality/0.3.3/before-tests.json) and [after](search-quality/0.3.3/after-tests.json)
 
-## Wiederholen
+## Repeat the measurements
 
-Mit der im README beschriebenen JDK-17-/Android-SDK-Umgebung im Repository-Wurzelverzeichnis:
+From the repository root, using the JDK 17/Android SDK environment described in the [development guide](development.md):
 
 ```sh
 ./gradlew :data:search:test \
@@ -61,7 +61,7 @@ Mit der im README beschriebenen JDK-17-/Android-SDK-Umgebung im Repository-Wurze
   -PsearchQualityLabel=0.3.3-after
 ```
 
-Für die Vorher-Prüfung bleiben die neuen Tests unverändert. In einer getrennten Arbeitskopie wird ausschließlich die geänderte Produktionsdatei auf den Ausgangsstand gesetzt:
+For the before check, the new tests remain unchanged. In a separate worktree, restore only the modified production file to the baseline:
 
 ```sh
 git worktree add --detach ../NETSCOUT-0.3.3-before HEAD
@@ -78,15 +78,13 @@ cd ../NETSCOUT-0.3.3-before
   -PsearchQualityLabel=72a0679-before
 ```
 
-Erwartet: **6 fehlgeschlagene Tests von 30**, ein Build-Exitcode ungleich null und der trotzdem erzeugte Qualitätsbericht mit **20/24** korrekten Textfällen. `--continue` lässt die Messung trotz der erwarteten Testfehler laufen. Modell und Tokenizer werden beim ersten Build heruntergeladen und anhand der eingecheckten Prüfsummen geprüft; spätere Läufe verwenden den lokalen Cache.
+Expected: **6 failures out of 30 tests**, a nonzero build exit code, and a quality report still generated with **20/24** correct text cases. `--continue` lets measurement run despite the expected test failures. The model and tokenizer are downloaded on the first build and verified against checked-in checksums; later runs use the local cache.
 
-## Version
+Version-number changes are recorded in the [changelog](../CHANGELOG.md#033).
 
-Patchversion **0.3.2 → 0.3.3**, lokaler Standard-Versionscode **3 → 4**. Die bestehende fortlaufende Vergabe des Versionscodes in CI und das permanente Debug-Zertifikat bleiben erhalten.
+## Final verification
 
-## Abschlussprüfung
-
-Erfolgreich ausgeführt:
+Successfully executed for this release:
 
 ```sh
 ./gradlew :core:search:test :data:search:test :data:relevance:test \
@@ -95,6 +93,6 @@ Erfolgreich ausgeführt:
 python3 scripts/verify-debug-signature.py app/build/outputs/apk/debug/app-debug.apk
 ```
 
-**140 Tests bestanden**, keine Fehler und keine übersprungenen Tests: Core 41, Suchadapter 80, Relevanzmodell 10, App/ViewModel 9. Android Lint sowie App- und Test-APK-Build erfolgreich. Die erzeugte App-APK bestätigt `versionName=0.3.3`, `versionCode=4`; das permanente Debug-Zertifikat wurde verifiziert.
+**140 tests passed**, with no failures or skipped tests: Core 41, search adapters 80, relevance model 10, app/ViewModel 9. Android Lint and app/test APK builds passed. The generated app APK confirms `versionName=0.3.3`, `versionCode=4`; the permanent debug certificate was verified.
 
-Android-Gerätetests wurden lokal nicht ausgeführt; der bestehende CI-Workflow führt sie separat auf einem Emulator aus.
+Android device tests were not run locally; the existing CI workflow runs them separately on an emulator.

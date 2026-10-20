@@ -1,31 +1,31 @@
 # Bugfixes 0.3.2
 
-Ausgangsstand: `b6bc3e45abdf0e10bc4644998c5cec9aa41b7a23` (0.3.1), geprüft am 19.10.2026.
-Vor jeder Produktionsänderung wurden die neuen Regressionstests gegen diesen Stand ausgeführt: **5 Tests, davon 4 fehlgeschlagen**. Nach den Korrekturen bestanden dieselben fünf Tests mit unveränderten Eingaben. Alle HTTP-Antworten stammen von lokalem MockWebServer; echte Suchdienste und Zugangsdaten sind nicht erforderlich.
+Baseline: `b6bc3e45abdf0e10bc4644998c5cec9aa41b7a23` (0.3.1), reviewed on 2026-10-19.
+Before any production changes, the new regression tests were run against this baseline: **5 tests, 4 failures**. After the fixes, the same five tests passed with unchanged inputs. All HTTP responses come from local MockWebServer; real search services and credentials are not required.
 
-## 1. HTTP 503 ignoriert eine angeforderte Pause
+## 1. HTTP 503 ignores a requested pause
 
-Reproduktion: Der Server antwortet mit `503 Service Unavailable` und `Retry-After: 120`; die nächste bereitgestellte Antwort ist HTTP 200. Obwohl der Server zwei Minuten Pause verlangt, wiederholt der Client die Anfrage nach 350 Millisekunden und liefert bereits die zweite Antwort. Dasselbe passiert bei `Retry-After: Thu, 01 Jan 2026 00:02:00 GMT`, wenn die injizierte Uhr auf `2026-01-01T00:00:00Z` steht.
+Reproduction: the server responds with `503 Service Unavailable` and `Retry-After: 120`; the next queued response is HTTP 200. Despite the requested two-minute pause, the client retries after 350 milliseconds and returns the second response. The same happens with `Retry-After: Thu, 01 Jan 2026 00:02:00 GMT` when the injected clock is at `2026-01-01T00:00:00Z`.
 
-Korrektur in `JsonHttpClient`: HTTP 503 mit `Retry-After` verwendet dieselbe Host-Pause wie eine Rate-Limit-Antwort. Sekunden und HTTP-Datum werden ausgewertet; der Status `RATE_LIMITED` informiert den Aufrufer über die Pause. Eine weitere Anfrage vor Ablauf erreicht den Server nicht. Genau zum Ablauf darf wieder abgefragt werden. HTTP 503 ohne Pausenanforderung wird weiterhin einmal wiederholt.
+Fix in `JsonHttpClient`: HTTP 503 with `Retry-After` uses the same host pause as a rate-limit response. Both seconds and HTTP dates are parsed; `RATE_LIMITED` informs the caller about the pause. Another request before expiry does not reach the server. Requests are allowed again exactly at expiry. HTTP 503 without a pause request is still retried once.
 
-## 2. Ungültige JSON-Treffer werden zu leerem Erfolg
+## 2. Invalid JSON results become empty success
 
-Reproduktion: Die HN-API liefert `{"hits":[null,"schema-changed",42,[]],"nbPages":1}`. `requireRows` prüft bisher nur, ob `hits` ein Array ist; `rows` entfernt anschließend alle Elemente, die keine JSON-Objekte sind. Der Provider meldet dadurch eine erfolgreiche leere Seite. `IndexFallbackProvider` ruft den verfügbaren Ausweichprovider kein einziges Mal auf. Eine SearXNG-Antwort mit denselben Elementen in `results` wird ebenfalls fälschlich als erfolgreicher leerer Endpunkt gemeldet.
+Reproduction: the HN API returns `{"hits":[null,"schema-changed",42,[]],"nbPages":1}`. Previously, `requireRows` only checked that `hits` was an array; `rows` then removed every element that was not a JSON object. The provider reported a successful empty page. `IndexFallbackProvider` never called the available fallback provider. A SearXNG response with the same elements in `results` was also incorrectly reported as a successful empty endpoint.
 
-Korrektur in `requireRows`: Eine Trefferliste muss ein Array aus JSON-Objekten sein. Strukturell ungültige Listen melden `SourceStatus.ERROR`; dadurch kann der vorhandene Ausweichweg greifen. Ist der letzte Provider betroffen, bleibt der Fehler sichtbar. Ein korrektes leeres Array `[]` bleibt erfolgreich und verursacht keinen unnötigen Ausweichaufruf.
+Fix in `requireRows`: a result list must be an array of JSON objects. Structurally invalid lists report `SourceStatus.ERROR`, allowing the existing fallback to run. If the final provider is affected, the error stays visible. A valid empty array `[]` remains successful and does not trigger an unnecessary fallback request.
 
-## Nachweis und Wiederholung
+## Evidence and reproduction
 
-| Regressionstest | Vorher | Nachher |
+| Regression test | Before | After |
 | --- | --- | --- |
-| `JsonHttpClientTest.service unavailable with Retry-After pauses instead of retrying immediately` | Fehlgeschlagen: erneute HTTP-Anfrage statt Pause | Bestanden; inklusive Sperre und Ablaufprüfung |
-| `JsonHttpClientTest.service unavailable also honors an HTTP date Retry-After` | Fehlgeschlagen: HTTP-Datum ignoriert | Bestanden |
-| `ProvidersTest.non-object search rows trigger the index fallback instead of a false empty success` | Fehlgeschlagen: 0 statt 1 Ausweichaufruf | Bestanden; Ausweichtreffer erhalten |
-| `ProvidersTest.unreadable final index response reports an error` | Fehlgeschlagen: Erfolg statt Fehler | Bestanden |
-| `ProvidersTest.a valid empty JSON result list remains successful without fallback` | Bestanden | Bestanden |
+| `JsonHttpClientTest.service unavailable with Retry-After pauses instead of retrying immediately` | Failed: another HTTP request instead of a pause | Passed, including blocking and expiry checks |
+| `JsonHttpClientTest.service unavailable also honors an HTTP date Retry-After` | Failed: HTTP date ignored | Passed |
+| `ProvidersTest.non-object search rows trigger the index fallback instead of a false empty success` | Failed: 0 instead of 1 fallback calls | Passed; fallback results retained |
+| `ProvidersTest.unreadable final index response reports an error` | Failed: success instead of error | Passed |
+| `ProvidersTest.a valid empty JSON result list remains successful without fallback` | Passed | Passed |
 
-Die gezielte Prüfung:
+Targeted check:
 
 ```sh
 ./gradlew :data:search:test \
@@ -35,7 +35,7 @@ Die gezielte Prüfung:
   --tests '*ProvidersTest.a valid empty*'
 ```
 
-Für die Vorher-Prüfung mit denselben Tests in einer getrennten Arbeitskopie ausschließlich die beiden Produktionsdateien zurücksetzen:
+To repeat the before check with the same tests, restore only the two production files in a separate worktree:
 
 ```sh
 git worktree add --detach ../NETSCOUT-0.3.2-before HEAD
@@ -44,16 +44,14 @@ git -C ../NETSCOUT-0.3.2-before restore \
   data/search/src/main/kotlin/de/netscout/data/JsonHttpClient.kt \
   data/search/src/main/kotlin/de/netscout/data/JsonHelpers.kt
 cd ../NETSCOUT-0.3.2-before
-# Hier die gezielte Prüfung oben ausführen: erwartet sind 4 fehlgeschlagene Tests.
+# Run the targeted check above here: 4 failing tests are expected.
 ```
 
-## Version
+Version-number changes are recorded in the [changelog](../CHANGELOG.md#032).
 
-Patchversion **0.3.1 → 0.3.2**, lokaler Standard-Versionscode **2 → 3**. Die bestehende Vergabe des Versionscodes in CI bleibt erhalten.
+## Final verification
 
-## Abschlussprüfung
-
-Erfolgreich ausgeführt:
+Successfully executed for this release:
 
 ```sh
 ./gradlew :core:search:test :data:search:test :data:relevance:test \
@@ -62,6 +60,6 @@ Erfolgreich ausgeführt:
 python3 scripts/verify-debug-signature.py app/build/outputs/apk/debug/app-debug.apk
 ```
 
-**131 Tests**, keine Fehler und keine übersprungenen Tests: Core 41, Suchadapter 71, Relevanzmodell 10, App/ViewModel 9. Android Lint sowie App- und Test-APK-Build erfolgreich. Die Paketmetadaten bestätigen `versionName=0.3.2`, `versionCode=3`; das permanente Debug-Zertifikat wurde verifiziert.
+**131 tests**, no failures or skipped tests: Core 41, search adapters 71, relevance model 10, app/ViewModel 9. Android Lint and app/test APK builds passed. Package metadata confirms `versionName=0.3.2`, `versionCode=3`; the permanent debug certificate was verified.
 
-Android-Gerätetests wurden lokal nicht ausgeführt; sie sind Bestandteil des bestehenden CI-Workflows.
+Android device tests were not run locally; they are part of the existing CI workflow.
