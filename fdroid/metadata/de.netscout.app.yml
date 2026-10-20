@@ -18,7 +18,7 @@ Repo: https://github.com/Mcpasi/NETSCOUT.git
 Builds:
   - versionName: 0.3.7
     versionCode: 8
-    commit: v0.3.7
+    commit: 97a7e7363fbb6a57f253fb456dd55ca29b22bd1c
     subdir: app
     sudo:
       - apt-get update
