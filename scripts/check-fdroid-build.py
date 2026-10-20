@@ -7,6 +7,7 @@ import shutil
 import subprocess
 
 from ruamel.yaml import YAML
+from fdroidserver import common
 
 ROOT = Path(__file__).resolve().parent.parent
 APP_ID = "de.netscout.app"
@@ -46,6 +47,11 @@ def main():
     metadata["Builds"][-1].pop("sudo", None)
     with recipe.open("w") as stream:
         yaml.dump(metadata, stream)
+    # Populate the checkout through F-Droid's VCS layer before fdroidserver
+    # 2.4.5 derives SOURCE_DATE_EPOCH. The build still performs its full scan.
+    checkout = work / "build" / APP_ID
+    checkout.parent.mkdir()
+    common.getvcs("git", str(ROOT), str(checkout)).gotorevision(revision)
     subprocess.run([
         "fdroid", "build", "--test", "--stop", "--no-tarball", "--scan-binary", "--refresh-scanner", APP_ID,
     ], cwd=work, check=True)

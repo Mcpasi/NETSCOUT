@@ -41,7 +41,8 @@ Gradle-/Maven-Downloads, aber keine Modell-Downloads. Ein vollständig netzloser
 Gradle-Build setzt zusätzlich bereits gecachte Maven-/Gradle-Abhängigkeiten voraus.
 
 GitHub Actions installiert dieselben Toolversionen und `fdroidserver==2.4.5`.
-`scripts/check-fdroid-build.py` lintet das Einreichungsrezept und führt dann
+`scripts/check-fdroid-build.py` lintet das Einreichungsrezept, holt den
+Quellcheckout mit F-Droids eigener VCS-Schicht und führt dann
 `fdroid build --test --stop --no-tarball --scan-binary --refresh-scanner` in einem neuen Arbeitsordner
 aus. Nur für diesen Test werden Repo und Commit durch das lokale Git-Repo und
 dessen unveränderlichen `HEAD` ersetzt. Damit prüft auch ein Pull Request seine
