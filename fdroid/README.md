@@ -64,6 +64,14 @@ committierte Änderungen. Die Unit-/Gerätetests laufen zusätzlich in den bishe
 GitHub-Jobs; die Release-Prüfung kontrolliert App-ID, feste Version, fehlende
 Signatur, Debuggable-Flag, das tatsächlich verpackte Modell und die Lizenzdateien.
 
+Lokal verifiziert am 20.10.2026 für 0.3.5: 153 JVM-/App-Unit-Tests und drei
+Python-Tests erfolgreich, Debug-/Release-Lint erfolgreich, beide APKs gebaut.
+Der Debug-Build übernimmt den angeforderten Versionscode 2000 und behält sein
+Zertifikat; Release bleibt bei Versionscode 6. Der vollständige F-Droid-Lauf aus
+`5cb6b2693fdd3beec1ba3828a2d8d2b15a3ce9d0` mit aktualisierten Scanner-Regeln
+besteht Quellscan, Release-Lint, Build und APK-Scan. Diese Prüfung lief unter
+OpenJDK 17 auf Debian mit Android SDK 35, außerhalb einer offiziellen F-Droid-VM.
+
 ## Einreichung und neue Versionen
 
 1. Den Quellcode öffentlich erreichbar halten. Für jedes Release `versionName`
