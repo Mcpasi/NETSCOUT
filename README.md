@@ -1,6 +1,6 @@
 # NetScout for Android
 
-![Version](https://img.shields.io/badge/version-0.3.8-blue)
+![Version](https://img.shields.io/badge/version-0.4.0-blue)
 ![Source](https://img.shields.io/badge/Source-Kotlin-yellow?logo=github)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 [![CI](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml)
@@ -65,6 +65,19 @@ Tap an empty star to save a result; tap the filled star to remove it. Open **Fav
 Favorites preserve the title, original link, displayed passage, sources, known publication dates, source metadata, and search keywords used for highlighting. Up to **20 results** remain stored without an expiry date. Links that differ only in tracking parameters count as one result. When the list is full, remove a favorite before adding another.
 
 New searches, credential changes, and app restarts keep your favorites. Previews work offline; opening an original source needs a connection. Uninstalling the app or clearing its data deletes favorites and saved credentials. Switching from a debug installation to a differently signed F-Droid installation requires uninstalling first.
+
+### Local relevance model
+
+NetScout uses [Horizon Labs Multilingual Reranker Small v1.2](https://huggingface.co/Horizon-Labs/multilingual-reranker-small), a 141M-parameter mmBERT-based cross-encoder supporting over 40 languages.
+
+- **Inference:** Fully on-device using ONNX Runtime 1.23.2
+- **Model:** 141M parameters, 268.4 MB ONNX
+- **Context:** Up to 384 tokens per query-passage pair
+- **License:** Apache-2.0
+- **Verification:** 24/24 fixed relevance test cases passed
+- **Privacy:** No cloud inference or runtime model downloads
+
+[Technical documentation](docs/relevance-model.md) | [Test results](docs/search-quality/0.4.0/horizon-small.json)
 
 ## Privacy and credentials
 
