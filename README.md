@@ -1,6 +1,6 @@
 # NetScout for Android
 
-![Version](https://img.shields.io/badge/version-0.3.7-blue)
+![Version](https://img.shields.io/badge/version-0.3.8-blue)
 ![Source](https://img.shields.io/badge/Source-Kotlin-yellow?logo=github)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
@@ -11,6 +11,7 @@ Search the web and public discussions from one native Android app. Enter your ke
 ## What you can do
 
 - Search the web, Reddit, YouTube, GitHub, Hacker News, and three Stack Exchange forums.
+- Optionally expand your keywords with related English and German terms to discover more relevant results across all six search sources.
 - Narrow results by publication date and sort by newest or relevance.
 - Read the original passage behind a match, expand it, and open its source.
 - See each source's progress, candidate count, confirmed matches, and service errors.
