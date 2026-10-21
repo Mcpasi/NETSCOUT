@@ -1,8 +1,10 @@
 # NetScout for Android
 
+![License](https://img.shields.io/badge/License-Apache%202.0-blue)
+
 Search the web and public discussions from one native Android app. Enter your keywords, choose up to six sources, and let NetScout check whether the results discuss your search topic together.
 
-**Android 8.0 or newer (API 26).** The app interface is currently in German. No NetScout account, payment, API key, or separate backend is required. Search results can be in any language.
+**Android 8.0 or newer (API 26).** The app interface is currently in German and English. No NetScout account, payment, API key, or separate backend is required. Search results can be in any language.
 
 ## What you can do
 
