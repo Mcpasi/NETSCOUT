@@ -113,7 +113,7 @@ private fun NetScoutContent(model: SearchViewModel, favoritesModel: FavoritesVie
                     }
                     IconButton(onClick = { showSettings = true }) { Icon(Icons.Outlined.Settings, contentDescription = stringResource(R.string.access_title)) }
                 }, colors = TopAppBarDefaults.topAppBarColors(containerColor = MaterialTheme.colorScheme.background))
-            LanguageBar(language, onLanguage)
+                LanguageBar(language, onLanguage)
             }
         },
     ) { padding ->
@@ -248,13 +248,18 @@ private fun NetScoutContent(model: SearchViewModel, favoritesModel: FavoritesVie
     dateField?.let { field ->
         val current = if (field == "from") state.from else state.until
         val picker = rememberDatePickerState(initialSelectedDateMillis = current?.atStartOfDay()?.toInstant(ZoneOffset.UTC)?.toEpochMilli())
+        val resources = rememberLanguageResources()
         DatePickerDialog(onDismissRequest = { dateField = null }, confirmButton = {
-            TextButton(onClick = {
-                val date = picker.selectedDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
-                if (field == "from") model.from(date) else model.until(date)
-                dateField = null
-            }) { Text(stringResource(R.string.apply)) }
-        }, dismissButton = { TextButton(onClick = { dateField = null }) { Text(stringResource(R.string.cancel)) } }) { DatePicker(picker) }
+            resources.Provide {
+                TextButton(onClick = {
+                    val date = picker.selectedDateMillis?.let { Instant.ofEpochMilli(it).atZone(ZoneOffset.UTC).toLocalDate() }
+                    if (field == "from") model.from(date) else model.until(date)
+                    dateField = null
+                }) { Text(stringResource(R.string.apply)) }
+            }
+        }, dismissButton = {
+            resources.Provide { TextButton(onClick = { dateField = null }) { Text(stringResource(R.string.cancel)) } }
+        }) { resources.Provide { DatePicker(picker) } }
     }
 }
 
@@ -353,23 +358,28 @@ private fun AccessDialog(initial: ApiSettings, onDismiss: () -> Unit, onSave: (A
     var reddit by remember { mutableStateOf(initial.redditAccessToken) }
     var github by remember { mutableStateOf(initial.githubToken) }
     var error by remember { mutableStateOf<SearchMessage?>(null) }
-    AlertDialog(onDismissRequest = onDismiss, title = { Text(stringResource(R.string.access_title)) }, text = {
-        Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
-            Text(stringResource(R.string.access_help), style = MaterialTheme.typography.bodyMedium)
-            OutlinedTextField(searxng, { searxng = it.take(4096) }, label = { Text(stringResource(R.string.searx_url)) }, placeholder = { Text("https://suche.example.org/") }, singleLine = true,
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth())
-            Text(stringResource(R.string.searx_help), style = MaterialTheme.typography.bodySmall)
-            SecretField(youtube, { youtube = it }, stringResource(R.string.youtube_key))
-            Text(stringResource(R.string.youtube_help), style = MaterialTheme.typography.bodySmall)
-            SecretField(reddit, { reddit = it }, stringResource(R.string.reddit_token))
-            Text(stringResource(R.string.reddit_help), style = MaterialTheme.typography.bodySmall)
-            SecretField(github, { github = it }, stringResource(R.string.github_token))
-            Text(stringResource(R.string.github_help), style = MaterialTheme.typography.bodySmall)
-            error?.let { Text(messageText(it), color = MaterialTheme.colorScheme.error) }
+    val resources = rememberLanguageResources()
+    AlertDialog(onDismissRequest = onDismiss, title = { resources.Provide { Text(stringResource(R.string.access_title)) } }, text = {
+        resources.Provide {
+            Column(Modifier.verticalScroll(rememberScrollState()), verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                Text(stringResource(R.string.access_help), style = MaterialTheme.typography.bodyMedium)
+                OutlinedTextField(searxng, { searxng = it.take(4096) }, label = { Text(stringResource(R.string.searx_url)) }, placeholder = { Text("https://suche.example.org/") }, singleLine = true,
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Uri), modifier = Modifier.fillMaxWidth())
+                Text(stringResource(R.string.searx_help), style = MaterialTheme.typography.bodySmall)
+                SecretField(youtube, { youtube = it }, stringResource(R.string.youtube_key))
+                Text(stringResource(R.string.youtube_help), style = MaterialTheme.typography.bodySmall)
+                SecretField(reddit, { reddit = it }, stringResource(R.string.reddit_token))
+                Text(stringResource(R.string.reddit_help), style = MaterialTheme.typography.bodySmall)
+                SecretField(github, { github = it }, stringResource(R.string.github_token))
+                Text(stringResource(R.string.github_help), style = MaterialTheme.typography.bodySmall)
+                error?.let { Text(messageText(it), color = MaterialTheme.colorScheme.error) }
+            }
         }
     }, confirmButton = {
-        TextButton(onClick = { error = onSave(ApiSettings(searxng, youtube, reddit, github)); if (error == null) onDismiss() }) { Text(stringResource(R.string.save)) }
-    }, dismissButton = { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } })
+        resources.Provide {
+            TextButton(onClick = { error = onSave(ApiSettings(searxng, youtube, reddit, github)); if (error == null) onDismiss() }) { Text(stringResource(R.string.save)) }
+        }
+    }, dismissButton = { resources.Provide { TextButton(onClick = onDismiss) { Text(stringResource(R.string.cancel)) } } })
 }
 
 @Composable

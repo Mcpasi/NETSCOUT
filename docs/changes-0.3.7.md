@@ -8,6 +8,7 @@ Android version name: `0.3.7`. Release version code: `8` (previously `6`).
 - A compact bar above the search and favorites screens provides German and British flags, `DE`/`EN` labels, and a **System** option. The active language is highlighted; the controls have translated accessibility labels and remain scrollable on narrow screens.
 - A manual selection is stored on the device and survives restarts. **System** clears the override and resumes automatic selection.
 - Search forms, settings, favorites, result controls, source status, validation and error messages use local Android string resources. Result counts use plurals; date fields and the date picker follow the selected interface language.
+- Dialog content explicitly retains the app's resource configuration, so settings, validation, buttons and native date-picker labels use the selected language even when the device uses the other language.
 - Changing the language immediately updates the interface while retaining search terms, filters, results and favorites. It does not issue another search or translate titles, passages, authors, URLs or the user's search terms.
 - Providers emit structured message identifiers and arguments so cached notices and errors can be rendered in either language. JVM diagnostics retain German fallback text. Saved favorites preserve source metadata identifiers; existing version-1 favorites remain readable, including recognized legacy index and Hacker News metadata.
 

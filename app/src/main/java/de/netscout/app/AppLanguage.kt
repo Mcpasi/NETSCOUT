@@ -84,6 +84,27 @@ internal fun AppLanguageHost(
     }
 }
 
+/** Dialog windows install their own Android composition locals. Restore the app's
+ * captured resources inside their content, including Material's date-picker labels. */
+internal class LanguageResources(private val context: Context, private val configuration: Configuration) {
+    @Composable
+    fun Provide(content: @Composable () -> Unit) {
+        CompositionLocalProvider(
+            LocalContext provides context,
+            LocalConfiguration provides configuration,
+            LocalLayoutDirection provides LayoutDirection.Ltr,
+            content = content,
+        )
+    }
+}
+
+@Composable
+internal fun rememberLanguageResources(): LanguageResources {
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    return remember(context, configuration) { LanguageResources(context, configuration) }
+}
+
 @Composable
 internal fun LanguageBar(selection: AppLanguage?, onSelect: (AppLanguage?) -> Unit) {
     val currentLanguage = LocalConfiguration.current.locales[0].language

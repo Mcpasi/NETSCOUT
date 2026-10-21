@@ -134,4 +134,20 @@ class LanguageScreenTest {
         compose.onNodeWithText("Apply").assertIsDisplayed()
         compose.onNodeWithText("Cancel").assertIsDisplayed()
     }
+
+    @Test fun germanDialogsOverrideTheEnglishDeviceLanguageIncludingNativeDatePickerLabels() {
+        device.value = configuration("en-US")
+        preferences.selected = AppLanguage.GERMAN
+        launch()
+        compose.onNodeWithContentDescription("Optionale Suchzugänge").performClick()
+        compose.onNodeWithText("SearXNG-URL (optional)").performTextInput("http://example.org")
+        compose.onNodeWithText("Speichern").performClick()
+        compose.onNodeWithText("Bitte eine HTTPS-Basis-URL ohne Zugangsdaten, Query oder Fragment eingeben.")
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithText("Abbrechen").performClick()
+        compose.onNodeWithContentDescription("Von-Datum wählen").performScrollTo().performClick()
+        compose.onNodeWithText("Datum auswählen").assertIsDisplayed()
+        compose.onNodeWithText("Übernehmen").assertIsDisplayed()
+        compose.onNodeWithText("Apply").assertDoesNotExist()
+    }
 }
