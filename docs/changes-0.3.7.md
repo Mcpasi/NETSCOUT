@@ -28,4 +28,4 @@ The checks for this release cover:
 - An unsigned `0.3.7` (`8`) release APK built with offline model preparation and checked by `scripts/verify-release-apk.py`.
 - F-Droid metadata validation with `fdroid lint`.
 
-The Android UI regression tests cover automatic language detection, persistence/reset, switching with existing search results and favorites, original source content, bilingual messages/plurals, settings validation and date-picker labels. They are included in the existing GitHub Actions emulator job. Local execution without hardware acceleration did not complete, so emulator verification is performed by CI.
+The Android UI regression tests cover automatic language detection, persistence/reset, switching with existing search results and favorites, original source content, bilingual messages/plurals, settings validation and date-picker labels. Existing tests explicitly scroll to form controls and settings help text so their visibility checks work with the additional language bar. They are included in the existing GitHub Actions emulator job. Local execution without hardware acceleration did not complete, so emulator verification is performed by CI.

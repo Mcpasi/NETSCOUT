@@ -81,7 +81,8 @@ class SearchScreenTest {
     @Test fun searchSettingsAreOptionalAndAllSixSourcesCanBeSelectedWithoutCredentials() {
         launch()
         compose.onNodeWithContentDescription("Optionale Suchzugänge").performClick()
-        compose.onNodeWithText("Die Suche funktioniert ohne Einrichtung. Nur ausfüllen, wenn du eigene Zugänge verwenden möchtest.").assertIsDisplayed()
+        compose.onNodeWithText("Die Suche funktioniert ohne Einrichtung. Nur ausfüllen, wenn du eigene Zugänge verwenden möchtest.")
+            .performScrollTo().assertIsDisplayed()
         compose.onNodeWithText("Abbrechen").performClick()
         compose.onNodeWithText("Reddit").performScrollTo().performClick()
         compose.onNodeWithText("YouTube").performScrollTo().performClick()
