@@ -3,6 +3,7 @@
 ![Version](https://img.shields.io/badge/version-0.3.8-blue)
 ![Source](https://img.shields.io/badge/Source-Kotlin-yellow?logo=github)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
+[![CI](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml/badge.svg?branch=main)](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml)
 
 Search the web and public discussions from one native Android app. Enter your keywords, choose up to six sources, and let NetScout check whether the results discuss your search topic together.
 
