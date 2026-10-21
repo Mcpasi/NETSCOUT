@@ -115,6 +115,20 @@ class SearchScreenTest {
         compose.onNodeWithText("Netz durchsuchen").performScrollTo().performClick()
         compose.onNodeWithText("Bitte mindestens zwei Zeichen eingeben.").performScrollTo().assertIsDisplayed()
     }
+    @Test fun termExpansionIsOptionalAndShowsItsQueriesInBothLanguages() {
+        launch()
+        compose.onNodeWithTag("query-expansion").performScrollTo().assertIsOff().performClick().assertIsOn()
+        compose.onNodeWithText("Keywords").performScrollTo().performTextInput("Android app")
+        compose.onNodeWithText("Zusätzliche Abfragen: \"Android\" \"application\" · \"Android\" \"anwendung\"")
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithContentDescription("Englisch verwenden").performClick()
+        compose.onNodeWithText("Expand search terms (optional)").performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("query-expansion").assertIsOn()
+        compose.onNodeWithText("Additional queries: \"Android\" \"application\" · \"Android\" \"anwendung\"")
+            .performScrollTo().assertIsDisplayed()
+        compose.onNodeWithTag("query-expansion").performScrollTo().performClick().assertIsOff()
+        compose.onNodeWithText("Additional queries:", substring = true).assertDoesNotExist()
+    }
     @Test fun sortingCheckboxesAreMutuallyExclusive() {
         launch()
         compose.onNodeWithText("Neueste Beiträge zuerst").performScrollTo().performClick().assertIsOn()

@@ -23,8 +23,11 @@ data class SearchRequest(
     val from: LocalDate? = null,
     val until: LocalDate? = null,
     val sort: SortOrder = SortOrder.RELEVANCE,
+    val expandTerms: Boolean = false,
 ) {
     val keywordQuery: KeywordQuery by lazy { KeywordQuery.parse(keywords) }
+    val expansionPlan: ExpansionPlan by lazy { QueryExpansion.plan(keywordQuery) }
+    val evidenceQuery: KeywordQuery get() = if (expandTerms) expansionPlan.evidenceQuery else keywordQuery
     fun normalized() = copy(keywords = KeywordQuery.normalizeWhitespace(keywords))
     fun validationError(): SearchMessage? = when {
         keywords.trim().length < 2 -> SearchMessage(MessageKey.QUERY_TOO_SHORT)
@@ -61,7 +64,8 @@ data class SearchItem(
     val contextMessage: SearchMessage? = null,
 )
 
-data class SearchCursor(val token: String, val offset: Int = 0)
+/** Provider tokens stay opaque. Only candidate retrieval reads the optional per-query cursors. */
+data class SearchCursor(val token: String, val offset: Int = 0, val variants: Map<Int, SearchCursor?>? = null)
 data class SourcePage(val items: List<SearchItem>, val nextCursor: SearchCursor? = null, val notes: List<SearchMessage> = emptyList()) {
     val note: String? get() = notes.takeIf { it.isNotEmpty() }?.joinToString("") { it.text }
 }

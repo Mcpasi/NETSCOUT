@@ -145,10 +145,12 @@ private fun NetScoutContent(model: SearchViewModel, favoritesModel: FavoritesVie
                                 )
                                 Text(stringResource(R.string.keywords_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                                 if (query.terms.isNotEmpty() && query.balancedQuotes) Text(
-                                    stringResource(R.string.required_terms, query.terms.joinToString(" · ") { if (' ' in it) context.getString(R.string.quoted_term, it) else it }),
+                                    stringResource(if (state.expandTerms) R.string.required_concepts else R.string.required_terms,
+                                        query.terms.joinToString(" · ") { if (' ' in it) context.getString(R.string.quoted_term, it) else it }),
                                     style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
                                 )
                                 Text(stringResource(R.string.relevance_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                QueryExpansionChoice(query, state.expandTerms, model::expandTerms)
                                 Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
                                     DateField(stringResource(R.string.date_from), state.from, { dateField = "from" }, { model.from(null) }, Modifier.weight(1f))
                                     DateField(stringResource(R.string.date_until), state.until, { dateField = "until" }, { model.until(null) }, Modifier.weight(1f))
@@ -260,6 +262,32 @@ private fun NetScoutContent(model: SearchViewModel, favoritesModel: FavoritesVie
         }, dismissButton = {
             resources.Provide { TextButton(onClick = { dateField = null }) { Text(stringResource(R.string.cancel)) } }
         }) { resources.Provide { DatePicker(picker) } }
+    }
+}
+
+@Composable
+private fun QueryExpansionChoice(query: KeywordQuery, enabled: Boolean, onChange: (Boolean) -> Unit) {
+    Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+        Row(
+            Modifier.fillMaxWidth().heightIn(min = 48.dp)
+                .toggleable(enabled, role = Role.Switch, onValueChange = onChange).testTag("query-expansion"),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Text(stringResource(R.string.expansion_label), modifier = Modifier.weight(1f), style = MaterialTheme.typography.bodyMedium)
+            Spacer(Modifier.width(8.dp))
+            Switch(checked = enabled, onCheckedChange = null)
+        }
+        if (enabled) {
+            Text(stringResource(R.string.expansion_help), style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            if (query.balancedQuotes && query.terms.isNotEmpty()) {
+                val additional = remember(query) { QueryExpansion.plan(query).queries.drop(1) }
+                Text(
+                    if (additional.isEmpty()) stringResource(R.string.expansion_none)
+                    else stringResource(R.string.expansion_preview, additional.joinToString(" · ")),
+                    style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.primary,
+                )
+            }
+        }
     }
 }
 

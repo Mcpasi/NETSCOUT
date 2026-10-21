@@ -143,6 +143,30 @@ class SearchViewModelTest {
         model.sort(SortOrder.RELEVANCE)
         assertEquals(SortOrder.RELEVANCE, model.state.value.sort)
     }
+    @Test fun `changing expansion keeps results until a new search and blocks stale pagination`() = runTest(dispatcher) {
+        var calls = 0
+        val model = model { request, _ ->
+            calls++
+            val title = if ("application" in request.keywordQuery.terms) "Android application" else "Android app"
+            SourcePage(listOf(SearchItem(title, SearchSource.GITHUB, title, "https://example.org/${if ("application" in title) "extra" else "original"}")), SearchCursor("next"))
+        }
+        assertFalse(model.state.value.expandTerms)
+        model.keywords("Android app"); model.search(); advanceUntilIdle()
+        assertEquals(1, model.state.value.results.size)
+        model.expandTerms(true)
+        assertTrue(model.state.value.filtersChanged)
+        assertEquals(1, model.state.value.results.size)
+        model.loadMore(); advanceUntilIdle()
+        assertEquals(1, calls)
+        model.search(); advanceUntilIdle()
+        assertTrue(model.state.value.activeRequest!!.expandTerms)
+        assertFalse(model.state.value.filtersChanged)
+        assertEquals(4, calls)
+        assertEquals(2, model.state.value.results.size)
+        model.expandTerms(false)
+        assertTrue(model.state.value.filtersChanged)
+        assertFalse(model.state.value.canLoadMore)
+    }
     @Test fun `user query filters source counts and still loads later matching pages`() = runTest(dispatcher) {
         val model = model { _, cursor ->
             if (cursor == null) SourcePage(listOf(SearchItem("partial", SearchSource.GITHUB, "Codex mobile iOS", "https://example.org/partial")), SearchCursor("2"))

@@ -4,9 +4,19 @@ import java.util.Locale
 import java.util.PriorityQueue
 
 /** Dynamic, literal candidate queries. Relevance of retrieved text is assessed separately. */
-class KeywordQuery private constructor(val terms: List<String>, val balancedQuotes: Boolean) {
-    private val patterns = terms.map(::pattern)
+class KeywordQuery private constructor(
+    val terms: List<String>,
+    val balancedQuotes: Boolean,
+    private val quotedTerms: Set<String>,
+    alternatives: List<List<String>> = terms.map { listOf(it) },
+) {
+    private val patterns = alternatives.map { options ->
+        Regex(options.joinToString("|") { "(?:${pattern(it).pattern})" }, RegexOption.IGNORE_CASE)
+    }
     val remoteQuery: String get() = terms.joinToString(" ") { "\"$it\"" }
+
+    internal fun isQuoted(term: String) = term.lowercase(Locale.ROOT) in quotedTerms
+    internal fun withAlternatives(alternatives: List<List<String>>) = KeywordQuery(terms, balancedQuotes, quotedTerms, alternatives)
 
     data class Match(val titleCoverage: Double, val textCoverage: Double)
 
@@ -82,11 +92,13 @@ class KeywordQuery private constructor(val terms: List<String>, val balancedQuot
 
         fun parse(input: String): KeywordQuery {
             val normalized = normalizeWhitespace(input).replace('„', '"').replace('“', '"').replace('”', '"')
-            val terms = Regex("\"([^\"]+)\"|([^\\s,;\"]+)").findAll(normalized).map {
+            val matches = Regex("\"([^\"]+)\"|([^\\s,;\"]+)").findAll(normalized).toList()
+            val terms = matches.map {
                 (it.groups[1]?.value ?: it.groups[2]!!.value).trim()
             }.filter { term -> term.any { it.isLetterOrDigit() } }
                 .distinctBy { it.lowercase(Locale.ROOT) }.toList()
-            return KeywordQuery(terms, normalized.count { it == '"' } % 2 == 0)
+            val quoted = matches.mapNotNull { it.groups[1]?.value?.trim()?.lowercase(Locale.ROOT) }.toSet()
+            return KeywordQuery(terms, normalized.count { it == '"' } % 2 == 0, quoted)
         }
 
         private fun pattern(term: String): Regex {

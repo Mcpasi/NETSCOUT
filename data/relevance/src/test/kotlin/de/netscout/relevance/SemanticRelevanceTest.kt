@@ -9,6 +9,25 @@ class SemanticRelevanceTest {
     private val request = SearchRequest("Codex,mobile,Android", setOf(SearchSource.GITHUB))
     private fun item(id: String, title: String, text: String = "") = SearchItem(id, SearchSource.GITHUB, title, "https://example.org/$id", searchText = text)
 
+    @Test fun `expanded evidence reaches the model with original intent and still needs semantic acceptance`() = runBlocking {
+        val queries = mutableListOf<String>()
+        val relevance = SemanticRelevance { PassageScorer { query, passages ->
+            queries.add(query)
+            passages.map { if ("useful" in it) 8.0 else -2.0 }.toDoubleArray()
+        } }
+        val expanded = request.copy(keywords = "Android app", expandTerms = true)
+        val page = relevance.assess(expanded, SourcePage(listOf(
+            item("good", "Android application", "A useful client for the device."),
+            item("bad", "Android Anwendung", "An irrelevant compatibility list."),
+            item("partial", "iOS application", "A useful client for the device."),
+        )))
+        assertTrue(queries.isNotEmpty())
+        assertTrue(queries.all { it == "Android app" })
+        assertEquals(listOf(true, false, false), page.items.map { it.assessment!!.accepted })
+        assertTrue(page.items.all { it.assessment!!.semantic })
+        assertEquals("good", ResultMerger.merge(expanded, page.items).single().item.id)
+    }
+
     @Test fun `wider context needs continuity even when the complete window scores highly`() = runBlocking {
         val relevance = SemanticRelevance { PassageScorer { query, passages ->
             DoubleArray(passages.size) { if (query == "Codex mobile Android") 8.0 else -8.0 }

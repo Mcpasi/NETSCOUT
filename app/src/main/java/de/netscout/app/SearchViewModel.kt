@@ -18,6 +18,7 @@ data class SearchUiState(
     val from: LocalDate? = null,
     val until: LocalDate? = null,
     val sort: SortOrder = SortOrder.RELEVANCE,
+    val expandTerms: Boolean = false,
     val activeRequest: SearchRequest? = null,
     val results: List<SearchHit> = emptyList(),
     val outcomes: Map<SearchSource, SourceOutcome> = emptyMap(),
@@ -30,7 +31,7 @@ data class SearchUiState(
     val settings: ApiSettings = ApiSettings(),
     val settingsWarning: SearchMessage? = null,
 ) {
-    fun request() = SearchRequest(keywords, sources, from, until, sort).normalized()
+    fun request() = SearchRequest(keywords, sources, from, until, sort, expandTerms).normalized()
     val filtersChanged get() = activeRequest != null && request() != activeRequest
     val canLoadMore get() = !isSearching && !filtersChanged && outcomes.values.any { it.page.nextCursor != null }
 }
@@ -51,6 +52,7 @@ class SearchViewModel(
     fun from(value: LocalDate?) { mutableState.update { it.copy(from = value, error = null) } }
     fun until(value: LocalDate?) { mutableState.update { it.copy(until = value, error = null) } }
     fun sort(value: SortOrder) { mutableState.update { it.copy(sort = value, error = null) } }
+    fun expandTerms(value: Boolean) { mutableState.update { it.copy(expandTerms = value, error = null) } }
     fun toggle(source: SearchSource) { mutableState.update {
         it.copy(sources = if (source in it.sources) it.sources - source else it.sources + source, error = null)
     } }

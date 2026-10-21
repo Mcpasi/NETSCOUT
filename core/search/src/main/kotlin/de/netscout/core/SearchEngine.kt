@@ -16,6 +16,7 @@ class SearchEngine(
     private val relevance: SearchRelevance = ContextRelevance,
 ) {
     private val providers = providers.associateBy { it.source }
+    private val candidates = CandidateRetrieval()
     private data class Key(val request: SearchRequest, val source: SearchSource, val cursor: SearchCursor?)
     private data class Cached(val at: Long, val outcome: SourceOutcome)
     private val cache = LinkedHashMap<Key, Cached>()
@@ -41,7 +42,7 @@ class SearchEngine(
                 val outcome = try {
                     onProgress(SourceProgress(source, SourcePhase.FETCHING))
                     val provider = providers[source] ?: throw SourceException(SourceStatus.SETUP_REQUIRED, SearchMessage(MessageKey.SOURCE_SETUP))
-                    val page = withTimeout(timeoutMillis) { provider.search(request, cursor) }
+                    val page = candidates.fetch(provider, request, cursor, timeoutMillis)
                     onProgress(SourceProgress(source, SourcePhase.ASSESSING, page.items.size))
                     // Model loading/inference has its own budget and remains cancellable.
                     SourceOutcome(source, SourceStatus.SUCCESS, withTimeout(60_000) { relevance.assess(request, page) })

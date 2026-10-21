@@ -28,6 +28,7 @@ enum class MessageKey(val fallback: String) {
     HTTP_REJECTED("Suchanfrage von der Quelle abgelehnt (HTTP %1\$s)."),
     RESPONSE_TOO_LARGE("Antwort der Quelle ist zu groß."),
     RELEVANCE_FAILED("Inhaltliche Trefferprüfung fehlgeschlagen. Bitte die Suche erneut starten."),
+    EXPANSION_PARTIAL(" %1\$s Begriffsabfragen fehlgeschlagen. Weitere Treffer laden, um diese erneut zu versuchen."),
     REDDIT_SETUP("Genehmigten Reddit-OAuth-Zugang oder SearXNG in Zugänge einrichten."),
     YOUTUBE_SETUP("YouTube-API-Key oder SearXNG in Zugänge einrichten."),
     SEARX_SETUP("SearXNG-HTTPS-URL in Zugänge einrichten; JSON muss dort aktiviert sein."),

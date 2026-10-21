@@ -36,6 +36,7 @@ internal fun Context.messageText(message: SearchMessage): String {
         MessageKey.HTTP_REJECTED -> R.string.message_http_rejected
         MessageKey.RESPONSE_TOO_LARGE -> R.string.message_response_too_large
         MessageKey.RELEVANCE_FAILED -> R.string.message_relevance_failed
+        MessageKey.EXPANSION_PARTIAL -> R.string.message_expansion_partial
         MessageKey.REDDIT_SETUP -> R.string.message_reddit_setup
         MessageKey.YOUTUBE_SETUP -> R.string.message_youtube_setup
         MessageKey.SEARX_SETUP -> R.string.message_searx_setup

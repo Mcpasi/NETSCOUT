@@ -61,8 +61,8 @@ object PassageSelector {
 /** Deterministic context gate for the core library; the Android app also injects a neural reranker. */
 object ContextRelevance : SearchRelevance {
     fun assessment(request: SearchRequest, item: SearchItem): RelevanceAssessment {
-        val passage = PassageSelector.select(request.keywordQuery, item, 1).firstOrNull()
-        val titleCoverage = request.keywordQuery.match(item.title, passage?.text.orEmpty())?.titleCoverage ?: 0.0
+        val passage = PassageSelector.select(request.evidenceQuery, item, 1).firstOrNull()
+        val titleCoverage = request.evidenceQuery.match(item.title, passage?.text.orEmpty())?.titleCoverage ?: 0.0
         return RelevanceAssessment(passage != null, titleCoverage, passage?.text.orEmpty())
     }
     override suspend fun assess(request: SearchRequest, page: SourcePage) = page.copy(items = page.items.map { item ->

@@ -10,6 +10,11 @@
     <string name="keywords_example">"z. B. selbst gehostete KI"</string>
     <string name="keywords_help">"Keywords als gemeinsames Thema · Komma oder Leerzeichen trennen · \"genaue Phrase\" · alle Sprachen"</string>
     <string name="required_terms">"Alle Begriffe erforderlich: %1$s"</string>
+    <string name="required_concepts">"Alle Konzepte erforderlich (mit verfügbaren Synonymen): %1$s"</string>
+    <string name="expansion_label">"Suchbegriffe erweitern (optional)"</string>
+    <string name="expansion_help">"Ergänzt bis zu zwei Synonymabfragen pro Quelle. Das benötigt mehr Anfragen und kann länger dauern. Zitierte Begriffe bleiben exakt; die Relevanz wird am ursprünglichen Thema geprüft."</string>
+    <string name="expansion_preview">"Zusätzliche Abfragen: %1$s"</string>
+    <string name="expansion_none">"Keine zusätzlichen Varianten für diese Begriffe. Die Originalabfrage wird verwendet."</string>
     <string name="quoted_term">"„%1$s“"</string>
     <string name="relevance_help">"Die App bewertet den inhaltlichen Bezug der gefundenen Textstellen direkt auf deinem Gerät."</string>
     <string name="date_from">"Von"</string>
@@ -106,6 +111,7 @@
     <string name="message_http_rejected">"Suchanfrage von der Quelle abgelehnt (HTTP %1$s)."</string>
     <string name="message_response_too_large">"Antwort der Quelle ist zu groß."</string>
     <string name="message_relevance_failed">"Inhaltliche Trefferprüfung fehlgeschlagen. Bitte die Suche erneut starten."</string>
+    <string name="message_expansion_partial">" %1$s Begriffsabfragen fehlgeschlagen. Weitere Treffer laden, um diese erneut zu versuchen."</string>
     <string name="message_reddit_setup">"Genehmigten Reddit-OAuth-Zugang oder SearXNG in Zugänge einrichten."</string>
     <string name="message_youtube_setup">"YouTube-API-Key oder SearXNG in Zugänge einrichten."</string>
     <string name="message_searx_setup">"SearXNG-HTTPS-URL in Zugänge einrichten; JSON muss dort aktiviert sein."</string>

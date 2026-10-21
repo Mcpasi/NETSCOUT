@@ -24,7 +24,7 @@ class SemanticRelevance(private val scorerFactory: () -> PassageScorer) : Search
         if (page.items.isEmpty()) return page
         return withContext(Dispatchers.Default) {
             try {
-                val passages = page.items.map { PassageSelector.semanticCandidates(request.keywordQuery, it) }
+                val passages = page.items.map { PassageSelector.semanticCandidates(request.evidenceQuery, it) }
                 val flattened = passages.flatten()
                 val scores = mutableListOf<Double>()
                 val connected = BooleanArray(flattened.size) { true }

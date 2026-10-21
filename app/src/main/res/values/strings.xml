@@ -10,6 +10,11 @@
     <string name="keywords_example">"e.g. self-hosted AI"</string>
     <string name="keywords_help">"Keywords describe a shared topic · separate with commas or spaces · \"exact phrase\" · all languages"</string>
     <string name="required_terms">"All terms required: %1$s"</string>
+    <string name="required_concepts">"All concepts required (with available synonyms): %1$s"</string>
+    <string name="expansion_label">"Expand search terms (optional)"</string>
+    <string name="expansion_help">"Adds up to two synonym queries per source. This uses more requests and may take longer. Quoted terms stay exact; relevance is checked against your original topic."</string>
+    <string name="expansion_preview">"Additional queries: %1$s"</string>
+    <string name="expansion_none">"No additional variants for these terms. The original query is used."</string>
     <string name="quoted_term">"“%1$s”"</string>
     <string name="relevance_help">"The app checks the relevance of matching passages directly on your device."</string>
     <string name="date_from">"From"</string>
@@ -106,6 +111,7 @@
     <string name="message_http_rejected">"The source rejected this search request (HTTP %1$s)."</string>
     <string name="message_response_too_large">"The response from this source is too large."</string>
     <string name="message_relevance_failed">"Content relevance checking failed. Please restart the search."</string>
+    <string name="message_expansion_partial">" %1$s term queries failed. Load more results to retry them."</string>
     <string name="message_reddit_setup">"Configure approved Reddit OAuth access or SearXNG in the access settings."</string>
     <string name="message_youtube_setup">"Configure a YouTube API key or SearXNG in the access settings."</string>
     <string name="message_searx_setup">"Configure a SearXNG HTTPS URL in the access settings; JSON output must be enabled."</string>
