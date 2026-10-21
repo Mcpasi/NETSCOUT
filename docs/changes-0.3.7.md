@@ -18,6 +18,12 @@ Android Lint identified one required build configuration change: language splitt
 
 The app version and the corresponding F-Droid release metadata are updated. The F-Droid recipe is pinned to the implementation commit; release APKs remain unsigned, and CI's increasing version-code override remains limited to debug builds.
 
+F-Droid's current GitLab build image uses Debian Trixie, which does not provide OpenJDK 17. The recipe adds the official Debian Bookworm and Bookworm security package sources before installing JDK 17, as required by the existing JVM toolchains. Application code and GitHub build scripts are unaffected.
+
+The scan exception explanation is stored in `MaintainerNotes` so `fdroid rewritemeta` preserves it and the GitLab formatting check can pass.
+
+The annotated `v0.3.7` release tag points to the same implementation commit as the recipe, allowing F-Droid's tag-based update check to find version `0.3.7` / code `8`.
+
 ## Verification
 
 The checks for this release cover:
@@ -27,7 +33,9 @@ The checks for this release cover:
 - Debug and release Android Lint, including confirmation that the runtime-language/App-Bundle warning is resolved.
 - A signed debug APK and a compiled Android test APK. The permanent debug signing certificate is unchanged.
 - An unsigned `0.3.7` (`8`) release APK built with offline model preparation and checked by `scripts/verify-release-apk.py`.
-- F-Droid metadata validation with `fdroid lint`.
+- F-Droid metadata validation with `fdroid lint` and unchanged output from `fdroid rewritemeta`, using both version 2.4.5 and the current upstream tools. The upstream `fdroid checkupdates --auto` check also passes without changing the recipe.
+- Anonymous HTTPS retrieval of the pinned GitHub commit, confirming app ID `de.netscout.app`, version `0.3.7` and version code `8`.
+- An isolated Debian APT simulation reproduces the missing JDK 17 package under Trixie and resolves it successfully after adding the recipe's Bookworm sources; no host packages are changed.
 
 The Android UI regression tests cover automatic language detection, persistence/reset, switching with existing search results and favorites, original source content, bilingual messages/plurals, settings validation and date-picker labels. They explicitly test German dialogs and native date-picker labels on an English device. Existing tests scroll to form controls and settings help text so their visibility checks work with the additional language bar.
 
