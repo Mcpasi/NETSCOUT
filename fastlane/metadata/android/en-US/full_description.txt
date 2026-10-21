@@ -1,4 +1,4 @@
-NetScout searches the web, GitHub, Hacker News, forums, Reddit and YouTube from a native Android app. All six sources work without your own API keys. You can optionally configure existing credentials or a custom SearXNG instance. The user interface is in German.
+NetScout searches the web, GitHub, Hacker News, forums, Reddit and YouTube from a native Android app. All six sources work without your own API keys. You can optionally configure existing credentials or a custom SearXNG instance. The user interface supports German and English.
 
 • Keywords and exact phrases, optional date ranges and source selection
 • Combined results with original links and per-source status

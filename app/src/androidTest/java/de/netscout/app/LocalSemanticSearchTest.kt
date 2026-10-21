@@ -3,6 +3,7 @@ package de.netscout.app
 import androidx.test.ext.junit.runners.AndroidJUnit4
 import androidx.test.platform.app.InstrumentationRegistry
 import de.netscout.core.*
+import de.netscout.relevance.BpeTokenizer
 import kotlinx.coroutines.runBlocking
 import org.junit.Assert.*
 import org.junit.Test
@@ -10,6 +11,14 @@ import org.junit.runner.RunWith
 
 @RunWith(AndroidJUnit4::class)
 class LocalSemanticSearchTest {
+    @Test fun packagedTokenizerUsesHorizonSmallPairIds() {
+        val assets = InstrumentationRegistry.getInstrumentation().targetContext.assets
+        val tokenizer = BpeTokenizer(assets.open("netscout-relevance/tokenizer.bin"))
+        assertArrayEquals(longArrayOf(2, 127937, 1, 9989, 1), tokenizer.pair("Codex", "Android"))
+        val lock = assets.open("netscout-relevance/MODEL.lock.json").bufferedReader().use { it.readText() }
+        assertTrue(lock.contains("Horizon-Labs/multilingual-reranker-small"))
+    }
+
     @Test fun packagedModelRunsThroughTheProductionAndroidAssetLoader() = runBlocking {
         val context = InstrumentationRegistry.getInstrumentation().targetContext
         val relevance = LocalSemanticSearch.relevance(context)

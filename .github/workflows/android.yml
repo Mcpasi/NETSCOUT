@@ -38,7 +38,7 @@ jobs:
         run: |
           sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
           python3 -m pip install 'fdroidserver==2.4.5'
-      - name: Verify offline model preparation
+      - name: Verify pinned Horizon Small and offline model preparation
         run: python3 -m unittest discover -s scripts/tests -v
       - name: Build using the F-Droid recipe
         run: python3 scripts/check-fdroid-build.py --work-dir "$RUNNER_TEMP/netscout-fdroid"
@@ -86,6 +86,8 @@ jobs:
           key: relevance-model-${{ hashFiles('relevance-model.lock.json') }}
       - name: Install Android SDK
         run: sdkmanager 'platforms;android-35' 'build-tools;35.0.0'
+      - name: Verify model preparation contracts
+        run: python3 -m unittest discover -s scripts/tests -v
       - name: Run tests, lint and build
         env:
           BUILD_NUMBER: ${{ github.run_number }}

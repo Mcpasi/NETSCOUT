@@ -2,6 +2,13 @@
 
 Version history moved from the README. Detailed investigation reports remain linked below.
 
+## 0.4.0
+
+- Replace the bundled local relevance model with Horizon Labs Multilingual Reranker **Small** v1.2 and its original mmBERT BPE tokenizer.
+- Pin model, source tokenizer and compiled tokenizer by size and SHA-256; preserve offline F-Droid builds and on-device inference without model downloads.
+- Extend tokenizer, model, Android asset and release checks. Release version code: `10`.
+- Migration, verification and size implications: [0.4.0 changes](docs/changes-0.4.0.md).
+
 ## 0.3.7
 
 - Add a bar for switching between English and German languages, using the German and British flags.

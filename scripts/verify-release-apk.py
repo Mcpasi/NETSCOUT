@@ -29,7 +29,18 @@ with zipfile.ZipFile(apk) as archive:
     with archive.open("assets/netscout-relevance/model.onnx") as stream:
         if hashlib.file_digest(stream, "sha256").hexdigest() != lock["files"]["model.onnx"]["sha256"]:
             sys.exit("Packaged model differs from the pinned model")
-    for asset in ("MODEL.md", "LICENSE.txt", "ONNX-RUNTIME-LICENSE.txt", "ONNX-RUNTIME-ThirdPartyNotices.txt", "NETSCOUT-LICENSE.txt", "NETSCOUT-NOTICE.txt", "tokenizer.bin"):
+    if json.loads(archive.read("assets/netscout-relevance/MODEL.lock.json")) != lock:
+        sys.exit("Packaged model identity differs from the pinned lock file")
+    tokenizer = archive.read("assets/netscout-relevance/tokenizer.bin")
+    expected_tokenizer = lock["compiled_tokenizer"]
+    if (not tokenizer.startswith(expected_tokenizer["format"].encode("ascii"))
+            or len(tokenizer) != expected_tokenizer["size"]
+            or hashlib.sha256(tokenizer).hexdigest() != expected_tokenizer["sha256"]):
+        sys.exit("Packaged tokenizer differs from the pinned Horizon BPE asset")
+    for asset, source in (("MODEL.md", "docs/relevance-model.md"), ("NETSCOUT-NOTICE.txt", "NOTICE")):
+        if archive.read("assets/netscout-relevance/" + asset) != (ROOT / source).read_bytes():
+            sys.exit("Packaged model documentation or notices differ from source: " + asset)
+    for asset in ("MODEL.md", "MODEL.lock.json", "LICENSE.txt", "ONNX-RUNTIME-LICENSE.txt", "ONNX-RUNTIME-ThirdPartyNotices.txt", "NETSCOUT-LICENSE.txt", "NETSCOUT-NOTICE.txt", "tokenizer.bin"):
         if archive.getinfo("assets/netscout-relevance/" + asset).file_size == 0:
             sys.exit("Empty release asset: " + asset)
 print(f"Verified unsigned NetScout {name} ({code}) release with pinned model and license notices.")

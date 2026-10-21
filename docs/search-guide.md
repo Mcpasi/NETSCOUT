@@ -1,6 +1,6 @@
 # Search guide
 
-For installation and a first search, start with the [README](../README.md). The app interface is currently in German; this guide explains the search behavior in English.
+For installation and a first search, start with the [README](../README.md). The app interface supports German and English; this guide explains the search behavior in English.
 
 ## Keywords and matching
 
@@ -16,9 +16,9 @@ Identical URLs are merged across sources and pages. Tracking parameters and frag
 
 ## Languages and model limits
 
-Searches can return any language, independently of the German interface. GitHub and Hacker News receive no German-language or country restriction; SearXNG explicitly receives `language=all`. Keyword language and platform coverage still influence the languages returned. The model was trained on 14 languages.
+Searches can return any language, independently of the interface language. GitHub and Hacker News receive no German-language or country restriction; SearXNG explicitly receives `language=all`. Keyword language and platform coverage still influence the languages returned. The bundled Horizon Small v1.2 reranker supports 40+ languages, including German and English.
 
-Candidate queries remain literal, without automatic translation or synonym expansion. The model can only assess what a platform returns. `AI`, for example, does not match merely because it appears inside `Gmail`. HN also has typo and prefix matching disabled and may not automatically drop missing words.
+Candidate queries are literal by default. The optional term-expansion switch adds up to two dictionary-based synonym queries per source and shows the additional queries before searching; see [0.3.8 changes](changes-0.3.8.md). The model does not generate translations or rewrite queries. The model can only assess what a platform returns. `AI`, for example, does not match merely because it appears inside `Gmail`. HN also has typo and prefix matching disabled and may not automatically drop missing words.
 
 The model runs entirely on the device, with no paid AI API, backend, or model download in the app. It increases APK size and processing time. Content assessments can be wrong; short ambiguous queries remain ambiguous, and conservative continuity checks can miss relevant explanations spread over several paragraphs. Model origin, fixed checksums, licensing, privacy, and quality limits are documented in [relevance-model.md](relevance-model.md).
 

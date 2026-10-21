@@ -1,0 +1,1 @@
+Lokale Relevanzbewertung auf Horizon Small v1.2 samt passendem Tokenizer umgestellt. Die Bewertung bleibt ohne weitere Downloads auf dem Gerät. Modellprüfung, Tests und F-Droid-Bauprüfung aktualisiert. Das mitgelieferte Modell ist größer und benötigt mehr Speicher als bisher.
