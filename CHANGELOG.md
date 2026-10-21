@@ -2,6 +2,12 @@
 
 Version history moved from the README. Detailed investigation reports remain linked below.
 
+## 0.3.7
+
+- Add a bar for switching between English and German languages, using the German and British flags.
+
+- Full translation of the interface, with device language detection; if no device language is detected, it remains in English by default. 
+
 ## 0.3.5
 
 - Added the F-Droid build recipe, release verification in GitHub CI, a free project license, and localized store metadata.
