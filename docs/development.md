@@ -26,7 +26,7 @@ All debug builds use the checked-in [development key](../debug-signing/README.md
 
 [Android tests & APKs](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml) runs unit tests, including real model inference and tokenizer reference vectors, Android Lint, a signed debug build, and emulator tests on API 29 in a separate job. A device test loads the packaged model through the production path. The workflow also supports manual `workflow_dispatch` runs. Test and lint reports are uploaded as artifacts.
 
-Platform tests use local HTTP fixtures/fake providers. They consume no platform quotas and require no secrets. After emulator tests, CI also installs the actual APK and launches its launcher activity. A screen recording of this launch check is included in `android-ui-tests`.
+Platform tests use local HTTP fixtures/fake providers. They consume no platform quotas and require no secrets. After emulator tests, CI also installs the actual APK and launches its launcher activity. A screenshot of this launch check is included in `android-ui-tests`.
 
 ## Release and F-Droid
 

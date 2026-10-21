@@ -43,7 +43,7 @@ Builds:
 
   - versionName: 0.4.0
     versionCode: 10
-    commit: feat/0.4.0-horizon-small
+    commit: 51ebd43b61a2d8e3a5b78a2e74cb8b90920e4065
     subdir: app
     sudo:
       - echo 'deb https://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/bookworm.list
