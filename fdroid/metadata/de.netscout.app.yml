@@ -18,7 +18,7 @@ Repo: https://github.com/Mcpasi/NETSCOUT.git
 Builds:
   - versionName: 0.3.8
     versionCode: 9
-    commit: v0.3.8
+    commit: 93d9f4205d6a2ff2ff0112f46bfe3709d98dc224
     subdir: app
     sudo:
       - echo 'deb https://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/bookworm.list

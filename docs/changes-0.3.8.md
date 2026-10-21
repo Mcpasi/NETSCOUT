@@ -26,7 +26,7 @@ Identische Kandidaten werden vor der Modellbewertung anhand der kanonischen URL,
 
 ## Version, F-Droid und GitHub
 
-Die aktive App-Konfiguration und die F-Droid-Felder `versionName`, `versionCode`, `CurrentVersion` und `CurrentVersionCode` verwenden übereinstimmend `0.3.8` / `9`. Die F-Droid-Rezeptur wird auf den vollständigen Implementierungscommit festgesetzt; das annotierte Tag `v0.3.8` verweist auf denselben Stand. Historische Versionsdokumentation bleibt unverändert.
+Die aktive App-Konfiguration und die F-Droid-Felder `versionName`, `versionCode`, `CurrentVersion` und `CurrentVersionCode` verwenden übereinstimmend `0.3.8` / `9`. Die F-Droid-Rezeptur ist auf den vollständigen Implementierungscommit `93d9f4205d6a2ff2ff0112f46bfe3709d98dc224` festgesetzt; das annotierte Tag `v0.3.8` verweist auf denselben Stand. Historische Versionsdokumentation bleibt unverändert.
 
 F-Droid baut weiterhin ohne GitHub-Variablen und ohne Signierschlüssel, prüft Modell-Downloads anhand ihrer Größe und SHA-256 und bereitet die Assets beim Gradle-Build offline vor. Die JDK-17-Voraussetzungen, Scanner-Ausnahme für die festgelegten freien Modellgewichte und die unsigned Release-APK bleiben erhalten. GitHub Actions führt weiterhin JVM-Tests, Lint, Debug-Build, Emulator-Tests und den vollständigen F-Droid-Build aus. Der erhöhte CI-Versionscode gilt weiterhin ausschließlich für Debug-Builds; der Release-Code bleibt `9`. Der permanente Debug-Signierschlüssel wird nicht geändert.
 
@@ -39,6 +39,7 @@ Die Änderungsdokumentation für diese Version steht ausschließlich in dieser D
 - Drei Python-Tests prüfen die unveränderte Offline-Modellvorbereitung.
 - Android Lint für Debug und Release sowie Debug-, Release- und Android-Test-APK.
 - Die APK-Prüfskripte bestätigen den unveränderten permanenten Debug-Signierer und die unsigned Release-APK mit Version `0.3.8`, Code `9`, festgelegtem Modell und Lizenzhinweisen. F-Droid-Metadaten bestehen `fdroid lint` und bleiben bei `fdroid rewritemeta` unverändert formatiert.
+- Der isolierte F-Droid-Durchlauf mit `fdroidserver 2.4.5` besteht Quellscan, Release-Lint, Offline-Gradle-Build und APK-Scan für den festgesetzten Implementierungscommit. Auch die daraus erzeugte unsigned Release-APK besteht die Inhalts- und Versionsprüfung.
 - Der neue Android-Oberflächentest prüft den standardmäßig ausgeschalteten Schalter, die erzeugten Abfragen und den Zustand beim Wechsel zwischen Deutsch und Englisch. Der bestehende Nachrichtentest prüft auch den neuen Teilfehlerhinweis in beiden Sprachen.
 
 Die Erweiterung kann durch zusätzliche externe Anfragen mehr Kontingent, Laufzeit und lokale Modellarbeit benötigen. Die kleine Wortliste und das Abfragebudget erweitern die erreichbaren Kandidaten gezielt; sie garantieren keine vollständige Suche oder korrekte Interpretation mehrdeutiger Begriffe. Ausschalten stellt den bisherigen Abruf- und Bewertungsmodus wieder her.
