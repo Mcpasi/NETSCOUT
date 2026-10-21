@@ -1,5 +1,6 @@
 # NetScout for Android
 
+![Version](https://img.shields.io/badge/version-0.3.7-blue)
 ![License](https://img.shields.io/badge/License-Apache%202.0-blue)
 
 Search the web and public discussions from one native Android app. Enter your keywords, choose up to six sources, and let NetScout check whether the results discuss your search topic together.
