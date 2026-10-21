@@ -1,7 +1,6 @@
 #!/usr/bin/env python3
 """Prepare pinned, verified model assets. No pip packages or runtime downloads required."""
 import argparse
-import base64
 import hashlib
 import json
 import os
@@ -20,6 +19,64 @@ def verified(path, entry):
         return False
     with path.open("rb") as stream:
         return hashlib.file_digest(stream, "sha256").hexdigest() == entry["sha256"]
+
+
+def compile_tokenizer(tokenizer, output):
+    """Compile Horizon's BPE tables without a Python/native tokenizer dependency.
+
+    Store only the alphabet, byte fallback, added tokens and ranked merges. The
+    runtime never needs a large JSON object graph or boxed merge-pair objects.
+    Integers are big-endian; merge pairs are sorted for primitive-array lookup.
+    """
+    model = tokenizer["model"]
+    if (model["type"] != "BPE" or not model["byte_fallback"] or model["ignore_merges"]
+            or model["dropout"] is not None or model["unk_token"] != "<unk>"
+            or model["continuing_subword_prefix"] is not None or model["end_of_word_suffix"] is not None
+            or not model["fuse_unk"]
+            or tokenizer["normalizer"] != {"type": "Replace", "pattern": {"String": " "}, "content": "▁"}
+            or tokenizer["pre_tokenizer"] != {"type": "Metaspace", "replacement": "▁", "prepend_scheme": "always", "split": True}):
+        raise ValueError("Unsupported Horizon BPE tokenizer configuration")
+    vocab = model["vocab"]
+    if (set(vocab.values()) != set(range(len(vocab)))
+            or [vocab.get(t) for t in ("<pad>", "<eos>", "<bos>", "<unk>")] != [0, 1, 2, 3]):
+        raise ValueError("Unexpected Horizon vocabulary or special token IDs")
+    processor = tokenizer["post_processor"]
+    expected_pair = [
+        {"SpecialToken": {"id": "<bos>", "type_id": 0}}, {"Sequence": {"id": "A", "type_id": 0}},
+        {"SpecialToken": {"id": "<eos>", "type_id": 0}}, {"Sequence": {"id": "B", "type_id": 0}},
+        {"SpecialToken": {"id": "<eos>", "type_id": 0}},
+    ]
+    if (processor["type"] != "TemplateProcessing" or processor["pair"] != expected_pair
+            or processor["special_tokens"]["<bos>"]["ids"] != [2]
+            or processor["special_tokens"]["<eos>"]["ids"] != [1]):
+        raise ValueError("Unexpected Horizon pair template")
+    alphabet = sorted((ord(token), token_id) for token, token_id in vocab.items() if len(token) == 1)
+    merges = sorted(
+        (vocab[left] << 32 | vocab[right], rank, vocab[left + right])
+        for rank, (left, right) in enumerate(model["merges"])
+    )
+    if len({pair for pair, _, _ in merges}) != len(merges):
+        raise ValueError("Duplicate BPE merge pair")
+    added = tokenizer["added_tokens"]
+    if any(t["single_word"] or t["normalized"] or t["rstrip"] or vocab.get(t["content"]) != t["id"] for t in added):
+        raise ValueError("Unsupported added-token behavior")
+    with output.open("wb") as stream:
+        stream.write(b"NSBP1")
+        stream.write(struct.pack(">II", len(vocab), len(alphabet)))
+        for codepoint, token_id in alphabet:
+            stream.write(struct.pack(">II", codepoint, token_id))
+        # Gemma/mmBERT has literal tab/newline/CR pieces instead of their <0x..>
+        # spellings. HF falls back to <unk> if a byte token is unavailable.
+        stream.write(struct.pack(">256I", *(vocab.get(f"<0x{byte:02X}>", vocab["<unk>"]) for byte in range(256))))
+        stream.write(struct.pack(">I", len(merges)))
+        for pair, rank, token_id in merges:
+            stream.write(struct.pack(">QII", pair, rank, token_id))
+        stream.write(struct.pack(">I", len(added)))
+        for token in added:
+            encoded = token["content"].encode("utf-8")
+            stream.write(struct.pack(">I", len(encoded)))
+            stream.write(encoded)
+            stream.write(struct.pack(">I?", token["id"], token["lstrip"]))
 
 
 def prepare(output=None, *, cache=None, offline=False):
@@ -66,21 +123,11 @@ def prepare(output=None, *, cache=None, offline=False):
         return
     output.mkdir(parents=True, exist_ok=True)
     shutil.copyfile(paths["model.onnx"], output / "model.onnx")
-    # Compact streaming format avoids a large JSON object graph on Android.
     tokenizer = json.loads(paths["tokenizer.json"].read_text())
-    assert tokenizer["model"]["type"] == "Unigram" and tokenizer["model"]["unk_id"] == 3
-    with (output / "tokenizer.bin").open("wb") as stream:
-        stream.write(b"NSTK1")
-        vocab = tokenizer["model"]["vocab"]
-        stream.write(struct.pack(">I", len(vocab)))
-        for token, score in vocab:
-            encoded = token.encode("utf-8")
-            stream.write(struct.pack(">I", len(encoded)))
-            stream.write(encoded)
-            stream.write(struct.pack(">f", score))
-        normalizer = base64.b64decode(tokenizer["normalizer"]["precompiled_charsmap"])
-        stream.write(struct.pack(">I", len(normalizer)))
-        stream.write(normalizer)
+    compile_tokenizer(tokenizer, output / "tokenizer.bin")
+    if "compiled_tokenizer" in lock and not verified(output / "tokenizer.bin", lock["compiled_tokenizer"]):
+        raise SystemExit("Compiled tokenizer differs from the pinned Horizon BPE asset")
+    shutil.copyfile(ROOT / "relevance-model.lock.json", output / "MODEL.lock.json")
     shutil.copyfile(ROOT / "docs/relevance-model.md", output / "MODEL.md")
     shutil.copyfile(ROOT / "third-party/APACHE-2.0.txt", output / "LICENSE.txt")
     shutil.copyfile(ROOT / "third-party/ONNX-RUNTIME-LICENSE.txt", output / "ONNX-RUNTIME-LICENSE.txt")

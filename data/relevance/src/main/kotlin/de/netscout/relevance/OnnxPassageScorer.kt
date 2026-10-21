@@ -9,7 +9,7 @@ import java.nio.ByteBuffer
 
 class OnnxPassageScorer(model: ByteBuffer, tokenizer: InputStream) : PassageScorer, Closeable {
     private val environment = OrtEnvironment.getEnvironment()
-    private val tokenizer = UnigramTokenizer(tokenizer)
+    private val tokenizer = BpeTokenizer(tokenizer)
     private val session = OrtSession.SessionOptions().use { options ->
         options.setIntraOpNumThreads(2)
         options.setInterOpNumThreads(1)
@@ -19,7 +19,7 @@ class OnnxPassageScorer(model: ByteBuffer, tokenizer: InputStream) : PassageScor
         if (passages.isEmpty()) return doubleArrayOf()
         val encoded = passages.map { tokenizer.pair(query, it) }
         val length = encoded.maxOf { it.size }
-        val ids = encoded.map { row -> LongArray(length) { row.getOrElse(it) { 1L } } }.toTypedArray()
+        val ids = encoded.map { row -> LongArray(length) { row.getOrElse(it) { BpeTokenizer.PAD_ID } } }.toTypedArray()
         val masks = encoded.map { row -> LongArray(length) { if (it < row.size) 1L else 0L } }.toTypedArray()
         return OnnxTensor.createTensor(environment, ids).use { input ->
             OnnxTensor.createTensor(environment, masks).use { mask ->

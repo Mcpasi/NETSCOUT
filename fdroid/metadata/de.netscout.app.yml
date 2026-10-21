@@ -41,6 +41,31 @@ Builds:
       - netscout.modelCache=.model-cache
       - netscout.offlineModel=true
 
+  - versionName: 0.4.0
+    versionCode: 10
+    commit: 51ebd43b61a2d8e3a5b78a2e74cb8b90920e4065
+    subdir: app
+    sudo:
+      - echo 'deb https://deb.debian.org/debian bookworm main' > /etc/apt/sources.list.d/bookworm.list
+      - echo 'deb https://security.debian.org/debian-security bookworm-security main'
+        > /etc/apt/sources.list.d/bookworm-security.list
+      - apt-get update
+      - apt-get install -y openjdk-17-jdk-headless python3
+      - update-alternatives --auto java
+    gradle:
+      - yes
+    rm:
+      - debug-signing/netscout-debug.jks
+    prebuild: python3 ../scripts/prepare-relevance-model.py --download-only --cache-dir
+      ../.model-cache
+    scanignore:
+      - .model-cache/f913154682468bfe92d6a7e02ed4e994e548c112fddc74452b573b17c949046e
+    preassemble:
+      - lintRelease
+    gradleprops:
+      - netscout.modelCache=.model-cache
+      - netscout.offlineModel=true
+
 MaintainerNotes: |-
   The scanignore entry contains Apache-2.0 model weights, not executable code.
   Size and SHA-256 are checked in prebuild and offline Gradle asset preparation.
@@ -49,5 +74,5 @@ MaintainerNotes: |-
 
 AutoUpdateMode: Version
 UpdateCheckMode: Tags ^v[0-9]+\.[0-9]+\.[0-9]+$
-CurrentVersion: 0.3.8
-CurrentVersionCode: 9
+CurrentVersion: 0.4.0
+CurrentVersionCode: 10

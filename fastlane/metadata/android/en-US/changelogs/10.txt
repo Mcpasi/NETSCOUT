@@ -1,0 +1,1 @@
+Replace the local relevance model with Horizon Small v1.2 and its matching tokenizer. Assessment stays on the device without additional downloads. Update model verification, tests and F-Droid build checks. The bundled model is larger and needs more memory than before.

@@ -6,7 +6,7 @@ For installation and usage, see the [README](../README.md). Release history is i
 
 Requirements: JDK 17, Python 3.11+, and an Android SDK with platform 35 and Build-Tools 35.0.0. Open the project in Android Studio, set `ANDROID_HOME`, or create a local `local.properties` with `sdk.dir=/path/to/sdk`. Gradle 8.11.1 is included as a wrapper with SHA-256 verification.
 
-The first build downloads approximately 136 MB of model/tokenizer files from a fixed Hugging Face revision and checks their SHA-256. Later builds use the local cache. No additional Python packages are required for model preparation.
+The first build downloads approximately 303 MB of Horizon Small model/tokenizer files from a fixed Hugging Face revision and checks their size and SHA-256. Later builds use the local cache. No additional Python packages are required for model preparation. The mmBERT BPE tokenizer is compiled with Python's standard library; the app needs neither a native tokenizer library nor a runtime download. See [0.4.0 changes](changes-0.4.0.md) for the migration and verification.
 
 ```sh
 ./gradlew :core:search:test :data:search:test :data:relevance:test :app:testDebugUnitTest :app:lintDebug :app:assembleDebug
@@ -26,13 +26,13 @@ All debug builds use the checked-in [development key](../debug-signing/README.md
 
 [Android tests & APKs](https://github.com/Mcpasi/NETSCOUT/actions/workflows/android.yml) runs unit tests, including real model inference and tokenizer reference vectors, Android Lint, a signed debug build, and emulator tests on API 29 in a separate job. A device test loads the packaged model through the production path. The workflow also supports manual `workflow_dispatch` runs. Test and lint reports are uploaded as artifacts.
 
-Platform tests use local HTTP fixtures/fake providers. They consume no platform quotas and require no secrets. After emulator tests, CI also installs the actual APK and launches its launcher activity. A screen recording of this launch check is included in `android-ui-tests`.
+Platform tests use local HTTP fixtures/fake providers. They consume no platform quotas and require no secrets. After emulator tests, CI also installs the actual APK and launches its launcher activity. A screenshot of this launch check is included in `android-ui-tests`.
 
 ## Release and F-Droid
 
 The additional **F-Droid source scan & unsigned release APK** job runs the [build recipe](../fdroid/metadata/de.netscout.app.yml) with `fdroid build`. F-Droid removes the Gradle wrapper and debug signing configuration and scans sources and the APK for known non-free components. `prebuild` downloads model inputs and verifies their size/SHA-256. The Gradle build must prepare these assets offline. No GitHub environment variables, tokens, or signing keys are required.
 
-The `netscout-fdroid-release-<run number>` artifact contains an **unsigned** release APK and its SHA-256. F-Droid handles production signing. The release version is fixed in source; `netscout.versionCode` affects debug builds only. See the [changelog](../CHANGELOG.md) for recorded version values.
+The `netscout-fdroid-release-<run number>` artifact contains an **unsigned** release APK and its SHA-256. F-Droid handles production signing. The release version is fixed in source; `netscout.versionCode` affects debug builds only. See the [0.4.0 release notes](changes-0.4.0.md) for the current version values.
 
 ```sh
 python3 scripts/prepare-relevance-model.py --download-only --cache-dir .model-cache

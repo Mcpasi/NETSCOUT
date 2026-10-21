@@ -5,7 +5,7 @@ NetScout's own source code, documentation and artwork are licensed under the
 Apache License, Version 2.0. See LICENSE.
 
 Third-party components retain their respective copyrights and licenses:
-- The bundled mmarco-mMiniLMv2-L12-H384-v1 model and tokenizer are distributed
+- The bundled Horizon-Labs/multilingual-reranker-small model and tokenizer are distributed
   under Apache-2.0. See relevance-model.lock.json and docs/relevance-model.md.
 - Microsoft ONNX Runtime is distributed under MIT. See
   third-party/ONNX-RUNTIME-LICENSE.txt.

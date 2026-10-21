@@ -1,4 +1,4 @@
-NetScout durchsucht Web, GitHub, Hacker News, Foren, Reddit und YouTube in einer nativen Android-Oberfläche. Alle sechs Quellen sind ohne eigene API-Schlüssel nutzbar. Optional lassen sich eigene Zugänge oder eine SearXNG-Instanz ergänzen. Die Oberfläche ist deutsch.
+NetScout durchsucht Web, GitHub, Hacker News, Foren, Reddit und YouTube in einer nativen Android-Oberfläche. Alle sechs Quellen sind ohne eigene API-Schlüssel nutzbar. Optional lassen sich eigene Zugänge oder eine SearXNG-Instanz ergänzen. Die Oberfläche ist auf Deutsch und Englisch verfügbar.
 
 • Keywords und genaue Phrasen, optionale Datumsgrenzen und Quellenauswahl
 • Gemeinsame Trefferliste mit Original-Links und Quellenstatus

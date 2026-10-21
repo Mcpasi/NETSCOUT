@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
 """Run the F-Droid recipe against this checkout's committed HEAD in isolation."""
 import argparse
+import json
 import os
 from pathlib import Path
+import re
 import shutil
 import subprocess
 
@@ -36,9 +38,22 @@ def main():
             "gradle": gradle,
             "java_paths": {"17": os.environ["JAVA_HOME"]},
         }, stream)
+    metadata = yaml.load(recipe)
+    latest = metadata["Builds"][-1]
+    gradle_source = (ROOT / "app/build.gradle.kts").read_text()
+    version = re.search(r'versionName = "([^"]+)"', gradle_source)[1]
+    code = int(re.search(r"versionCode = (\d+)", gradle_source)[1])
+    lock = json.loads((ROOT / "relevance-model.lock.json").read_text())
+    if ((latest["versionName"], latest["versionCode"]) != (version, code)
+            or (metadata["CurrentVersion"], metadata["CurrentVersionCode"]) != (version, code)):
+        parser.error("App and latest F-Droid release versions must match")
+    expected_scanignore = ".model-cache/" + lock["files"]["model.onnx"]["sha256"]
+    if latest.get("scanignore") != [expected_scanignore]:
+        parser.error("Latest F-Droid scanner exception must match the pinned model weights")
+    if not {"netscout.modelCache=.model-cache", "netscout.offlineModel=true"}.issubset(latest.get("gradleprops", [])):
+        parser.error("F-Droid must prepare the verified model from its offline cache")
     # Validate the submission metadata before selecting the local CI revision.
     subprocess.run(["fdroid", "lint", APP_ID], cwd=work, check=True)
-    metadata = yaml.load(recipe)
     revision = subprocess.check_output(["git", "rev-parse", "HEAD"], cwd=ROOT, text=True).strip()
     metadata["Repo"] = str(ROOT)
     metadata["Builds"][-1]["commit"] = revision
@@ -53,7 +68,8 @@ def main():
     checkout.parent.mkdir()
     common.getvcs("git", str(ROOT), str(checkout)).gotorevision(revision)
     subprocess.run([
-        "fdroid", "build", "--test", "--stop", "--no-tarball", "--scan-binary", "--refresh-scanner", APP_ID,
+        "fdroid", "build", "--test", "--stop", "--no-tarball", "--scan-binary", "--refresh-scanner",
+        f"{APP_ID}:{latest['versionCode']}",
     ], cwd=work, check=True)
     unsigned = work / "unsigned"
     unsigned.mkdir(exist_ok=True)
